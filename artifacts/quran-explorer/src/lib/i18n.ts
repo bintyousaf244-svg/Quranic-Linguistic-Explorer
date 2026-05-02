@@ -56,6 +56,8 @@ export const strings = {
     thematicEmptyTitle: 'Search by Meaning',
     thematicRootsLabel: 'Relevant Arabic Roots',
 
+    tasreefTitle: 'Verb Conjugation (تصريف الأفعال)',
+
     rootTitle: 'Quranic Root Search',
     rootPlaceholder: 'اكتب الجذر الثلاثي (مثل: كتب، علم، رحم)...',
     rootCommon: 'Common:',
@@ -126,6 +128,8 @@ export const strings = {
     thematicEmpty: 'کوئی بھی موضوع لکھیں — رحمت، صبر، عدل، نور — اور AI کی مدد سے ہر متعلقہ آیت اور عربی جذور دیکھیں۔',
     thematicEmptyTitle: 'معنی سے تلاش کریں',
     thematicRootsLabel: 'متعلقہ عربی جذور',
+
+    tasreefTitle: 'تصریف الافعال',
 
     rootTitle: 'قرآنی جذر تلاش',
     rootPlaceholder: 'اكتب الجذر الثلاثي (مثل: كتب، علم، رحم)...',

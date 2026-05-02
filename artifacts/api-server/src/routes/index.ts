@@ -4,6 +4,7 @@ import analysisRouter from "./analysis";
 import grammarRouter from "./grammar";
 import rootSearchRouter from "./rootSearch";
 import thematicSearchRouter from "./thematicSearch";
+import tasreefRouter from "./tasreef";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(analysisRouter);
 router.use(grammarRouter);
 router.use(rootSearchRouter);
 router.use(thematicSearchRouter);
+router.use(tasreefRouter);
 
 export default router;
