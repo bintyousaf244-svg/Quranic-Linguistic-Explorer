@@ -1,6 +1,6 @@
 import React from 'react';
 import { Book, Search, Moon, Sun, Languages } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/useLanguage';
 
 interface LayoutProps {
   children: React.ReactNode;

@@ -3,7 +3,7 @@ import { Surah, SurahDetail, Note } from '../types';
 import { getSurahDetail } from '../services/quranService';
 import { AyahCard } from './AyahCard';
 import { Loader2, ArrowLeft, ArrowUp } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/useLanguage';
 import { surahUrduMeanings } from '../lib/surahUrduNames';
 
 interface SurahViewProps {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Loader2, X, BookOpen, ChevronRight } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/useLanguage';
 
 interface RootMatch {
   surahNumber: number;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Surah } from '../types';
 import { ChevronRight } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/useLanguage';
 import { surahUrduMeanings } from '../lib/surahUrduNames';
 
 interface SurahListProps {

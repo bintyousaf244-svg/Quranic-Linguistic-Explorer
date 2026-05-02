@@ -4,7 +4,7 @@ import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Langu
 import ReactMarkdown from 'react-markdown';
 import { streamAnalysis, fetchAuthenticGrammar } from '../services/analysisService';
 import { AnalysisCache } from '../services/cacheService';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/useLanguage';
 
 interface AyahCardProps {
   ayah: Ayah;

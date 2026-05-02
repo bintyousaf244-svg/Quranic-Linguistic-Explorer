@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Loader2, X, Sparkles, BookOpen, ChevronRight, Lightbulb } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/useLanguage';
 
 interface ThematicRoot {
   root: string;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { LanguageProvider } from './context/LanguageProvider';
+import { useLanguage } from './context/useLanguage';
 import { Layout } from './components/Layout';
 import { SurahList } from './components/SurahList';
 import { SurahView } from './components/SurahView';
