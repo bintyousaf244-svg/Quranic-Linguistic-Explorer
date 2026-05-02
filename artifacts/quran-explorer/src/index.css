@@ -77,12 +77,47 @@
 .markdown-body tr:last-child td { border-bottom: none; }
 
 /* RTL (Arabic) markdown panels */
-.markdown-rtl { direction: rtl; text-align: right; font-family: "Amiri", serif; line-height: 2.2; }
-.markdown-rtl h1, .markdown-rtl h2, .markdown-rtl h3 { text-align: right; font-family: "Amiri", serif; }
-.markdown-rtl p { text-align: right; }
-.markdown-rtl ul, .markdown-rtl ol { padding-right: 1.5rem; padding-left: 0; }
-.markdown-rtl li { text-align: right; }
-.markdown-rtl strong { font-family: "Amiri", serif; font-weight: 700; }
-.markdown-rtl table { direction: rtl; }
+.markdown-rtl {
+  direction: rtl;
+  text-align: right;
+  font-family: "Amiri", serif;
+  font-size: 1.1rem;
+  line-height: 2.4;
+  color: var(--grove-purple);
+}
+.markdown-rtl h1, .markdown-rtl h2, .markdown-rtl h3, .markdown-rtl h4 {
+  text-align: right;
+  font-family: "Amiri", serif;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--grove-purple);
+  line-height: 2;
+}
+.markdown-rtl h3 { font-size: 1.25rem; }
+.markdown-rtl h4 { font-size: 1.1rem; }
+.markdown-rtl p { text-align: right; margin-bottom: 0.9rem; }
+.markdown-rtl ul, .markdown-rtl ol {
+  padding-right: 2rem;
+  padding-left: 0;
+  margin-bottom: 0.9rem;
+}
+.markdown-rtl li { text-align: right; margin-bottom: 0.4rem; line-height: 2.4; }
+.markdown-rtl strong {
+  font-family: "Amiri", serif;
+  font-weight: 700;
+  color: var(--grove-purple);
+}
+.markdown-rtl em { font-style: normal; font-weight: 600; }
+.markdown-rtl hr { margin: 1.5rem 0; opacity: 0.2; }
+.markdown-rtl blockquote {
+  border-right: 3px solid color-mix(in srgb, var(--grove-purple) 30%, transparent);
+  border-left: none;
+  padding-right: 1rem;
+  padding-left: 0;
+  margin-right: 0;
+  opacity: 0.8;
+}
+.markdown-rtl table { direction: rtl; width: 100%; }
 .markdown-rtl th { text-align: right; }
-.markdown-rtl td { text-align: right; }
+.markdown-rtl td { text-align: right; line-height: 2; }

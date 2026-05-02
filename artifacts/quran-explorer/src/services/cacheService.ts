@@ -1,4 +1,20 @@
-const CACHE_PREFIX = 'quran_analysis_';
+const CACHE_PREFIX = 'quran_analysis_v2_';
+
+function purgeOldCache() {
+  try {
+    const oldPrefix = 'quran_analysis_';
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(oldPrefix) && !key.startsWith(CACHE_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  } catch { /* ignore */ }
+}
+
+purgeOldCache();
 
 export const AnalysisCache = {
   get: (type: string, surahName: string, ayahNumber: number): string | null => {
