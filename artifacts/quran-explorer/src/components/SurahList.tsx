@@ -54,19 +54,19 @@ export const SurahList: React.FC<SurahListProps> = ({ surahs, onSelect, selected
                 </h3>
                 <p
                   className="text-[10px] font-bold uppercase tracking-wider opacity-60"
-                  style={{ fontFamily: isUrdu ? '"Amiri", serif' : undefined, fontSize: isUrdu ? '12px' : undefined }}
+                  style={{ fontFamily: isUrdu ? 'var(--font-urdu-var)' : undefined, fontSize: isUrdu ? '12px' : undefined }}
                 >
                   {surah.numberOfAyahs} {t('ayahs')} · {revelationLabel(surah.revelationType)}
                 </p>
                 {isUrdu && meaning && (
-                  <p className="text-xs mt-0.5 opacity-70" style={{ fontFamily: '"Amiri", serif', color: isSelected ? 'rgba(255,255,255,0.8)' : 'var(--grove-green)' }}>
+                  <p className="text-xs mt-0.5 opacity-70" style={{ fontFamily: 'var(--font-urdu-var)', color: isSelected ? 'rgba(255,255,255,0.8)' : 'var(--grove-green)' }}>
                     {meaning}
                   </p>
                 )}
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className="text-2xl font-arabic leading-none" style={{ fontFamily: '"Amiri", serif' }}>
+              <span className="text-2xl font-arabic leading-none" style={{ fontFamily: 'var(--font-arabic-var)' }}>
                 {surah.name}
               </span>
               <ChevronRight size={16} className="transition-transform group-hover:translate-x-1 opacity-50" />

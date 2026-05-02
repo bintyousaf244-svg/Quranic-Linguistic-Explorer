@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Amiri:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
+
 @layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -20,6 +21,10 @@
 }
 
 :root {
+  --font-arabic-var: "Amiri", serif;
+  --font-urdu-var: "Amiri", serif;
+  --font-english-var: "Inter", ui-sans-serif, system-ui, sans-serif;
+
   --grove-purple: #582C6F;
   --grove-green: #416D53;
   --grove-pink: #D97B8F;
@@ -45,7 +50,7 @@
   body {
     background-color: var(--grove-cream);
     color: var(--grove-purple);
-    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-english-var, "Inter", ui-sans-serif, system-ui, sans-serif);
     transition: background-color 0.3s, color 0.3s;
   }
 
@@ -55,7 +60,7 @@
   }
 
   .dir-rtl { direction: rtl; }
-  .font-arabic { font-family: "Amiri", serif; }
+  .font-arabic { font-family: var(--font-arabic-var, "Amiri", serif); }
 }
 
 .markdown-body {

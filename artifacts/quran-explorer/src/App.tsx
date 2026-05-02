@@ -4,7 +4,7 @@ import { shadcn } from '@clerk/themes';
 import { Router as WouterRouter, Switch, Route, useLocation } from 'wouter';
 import { LanguageProvider } from './context/LanguageProvider';
 import { useLanguage } from './context/useLanguage';
-import { Layout } from './components/Layout';
+import { Layout, FontSettings, DEFAULT_FONT_SETTINGS } from './components/Layout';
 import { SurahList } from './components/SurahList';
 import { SurahView } from './components/SurahView';
 import { WordSearch } from './components/WordSearch';
@@ -116,6 +116,17 @@ function AppContent() {
     document.documentElement.classList.toggle('dark', isDarkMode);
     try { localStorage.setItem('darkMode', JSON.stringify(isDarkMode)); } catch {}
   }, [isDarkMode]);
+
+  const [fontSettings, setFontSettings] = useState<FontSettings>(() => {
+    try { return JSON.parse(localStorage.getItem('fontSettings') || 'null') ?? DEFAULT_FONT_SETTINGS; } catch { return DEFAULT_FONT_SETTINGS; }
+  });
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--font-arabic-var', `"${fontSettings.arabic}", serif`);
+    document.documentElement.style.setProperty('--font-urdu-var', `"${fontSettings.urdu}", serif`);
+    document.documentElement.style.setProperty('--font-english-var', `"${fontSettings.english}", ui-sans-serif, system-ui, sans-serif`);
+    try { localStorage.setItem('fontSettings', JSON.stringify(fontSettings)); } catch {}
+  }, [fontSettings]);
 
   useEffect(() => {
     getAllSurahs()
@@ -269,6 +280,8 @@ function AppContent() {
       onFontSizeChange={setFontSize}
       isDarkMode={isDarkMode}
       onToggleDarkMode={() => setIsDarkMode((d: boolean) => !d)}
+      fontSettings={fontSettings}
+      onFontChange={(type, font) => setFontSettings((prev: FontSettings) => ({ ...prev, [type]: font }))}
     >
       {isDictionaryOpen && <WordSearch onClose={() => setIsDictionaryOpen(false)} />}
       {isConjugationOpen && <VerbConjugation onClose={() => setIsConjugationOpen(false)} />}

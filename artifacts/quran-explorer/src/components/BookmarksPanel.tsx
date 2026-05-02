@@ -45,7 +45,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
               <Bookmark size={18} style={{ color: 'var(--grove-gold)' }} />
             </div>
             <div>
-              <h2 className="text-lg font-bold" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+              <h2 className="text-lg font-bold" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? 'var(--font-urdu-var)' : undefined }}>
                 {isUrdu ? 'میرے بُک مارکس' : 'My Bookmarks'}
               </h2>
               <p className="text-xs opacity-50 flex items-center gap-1" style={{ color: 'var(--grove-purple)' }}>
@@ -98,7 +98,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
                     {bms[0].surahName}
                   </span>
                   {bms[0].surahNameAr && (
-                    <span className="text-base" style={{ fontFamily: '"Amiri", serif', color: 'var(--grove-purple)', opacity: 0.7 }}>
+                    <span className="text-base" style={{ fontFamily: 'var(--font-arabic-var)', color: 'var(--grove-purple)', opacity: 0.7 }}>
                       {bms[0].surahNameAr}
                     </span>
                   )}

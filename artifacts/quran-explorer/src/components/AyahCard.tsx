@@ -136,7 +136,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
       style={{
         backgroundColor: activeTabs.includes(id) ? color : `color-mix(in srgb, ${color} 12%, transparent)`,
         color: activeTabs.includes(id) ? 'white' : color,
-        fontFamily: isUrdu ? '"Amiri", serif' : undefined,
+        fontFamily: isUrdu ? 'var(--font-urdu-var)' : undefined,
         fontSize: isUrdu ? '13px' : undefined,
       }}
     >
@@ -188,12 +188,12 @@ export const AyahCard: React.FC<AyahCardProps> = ({
         ) : (
           <>
             <div className={`markdown-body prose prose-sm max-w-none${rtl ? ' markdown-rtl' : ''}`}
-              style={{ fontSize: `${analysisFontSize}px`, direction: rtl ? 'rtl' : 'ltr', textAlign: rtl ? 'right' : 'left', fontFamily: rtl ? '"Amiri", serif' : undefined }}>
+              style={{ fontSize: `${analysisFontSize}px`, direction: rtl ? 'rtl' : 'ltr', textAlign: rtl ? 'right' : 'left', fontFamily: rtl ? 'var(--font-arabic-var)' : undefined }}>
               <ReactMarkdown>{content}</ReactMarkdown>
             </div>
             {footerNote && (
               <div className="mt-8 pt-4 border-t text-[10px] italic opacity-40 flex items-center gap-1.5"
-                style={{ borderColor: `color-mix(in srgb, ${color} 15%, transparent)`, color, direction: 'rtl', textAlign: 'right', fontFamily: '"Amiri", serif' }}>
+                style={{ borderColor: `color-mix(in srgb, ${color} 15%, transparent)`, color, direction: 'rtl', textAlign: 'right', fontFamily: 'var(--font-arabic-var)' }}>
                 {isGrammar && grammarIsAuthentic && <span style={{ opacity: 0.7 }}>📚</span>}
                 {footerNote}
               </div>
@@ -279,7 +279,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
         </div>
 
         <div className="text-right mb-10" dir="rtl">
-          <p className="leading-loose font-arabic" style={{ fontSize: `${fontSize}px`, fontFamily: '"Amiri", serif', color: 'var(--grove-purple)' }}>
+          <p className="leading-loose font-arabic" style={{ fontSize: `${fontSize}px`, fontFamily: 'var(--font-arabic-var)', color: 'var(--grove-purple)' }}>
             {ayah.text}
           </p>
         </div>
@@ -296,7 +296,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
                     ? (tLang === 'none' ? 'var(--grove-pink)' : 'var(--grove-purple)')
                     : 'transparent',
                   color: activeTranslation === tLang ? 'white' : `color-mix(in srgb, var(--grove-purple) 50%, transparent)`,
-                  fontFamily: tLang === 'ur' || tLang === 'ar' || isUrdu ? '"Amiri", serif' : undefined,
+                  fontFamily: tLang === 'ur' ? 'var(--font-urdu-var)' : tLang === 'ar' ? 'var(--font-arabic-var)' : isUrdu ? 'var(--font-urdu-var)' : undefined,
                   fontSize: isUrdu ? '13px' : undefined,
                 }}
               >
@@ -309,7 +309,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
             <div className={activeTranslation === 'ur' || activeTranslation === 'ar' ? 'text-right' : 'text-left'}
               dir={activeTranslation === 'ur' || activeTranslation === 'ar' ? 'rtl' : 'ltr'}>
               <p className={`leading-relaxed opacity-80 ${activeTranslation === 'ur' || activeTranslation === 'ar' ? 'text-2xl font-arabic' : 'text-base font-medium'}`}
-                style={{ color: 'var(--grove-purple)', fontFamily: activeTranslation !== 'en' ? '"Amiri", serif' : undefined }}>
+                style={{ color: 'var(--grove-purple)', fontFamily: activeTranslation === 'ur' ? 'var(--font-urdu-var)' : activeTranslation !== 'en' ? 'var(--font-arabic-var)' : undefined }}>
                 {activeTranslation === 'en' && ayah.translations?.en}
                 {activeTranslation === 'ur' && ayah.translations?.ur}
                 {activeTranslation === 'ar' && ayah.translations?.ar}
@@ -354,7 +354,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
                   fontSize: isRtl ? `${Math.max(18, analysisFontSize * 1.1)}px` : `${analysisFontSize}px`,
                   direction: isRtl ? 'rtl' : 'ltr',
                   textAlign: isRtl ? 'right' : 'left',
-                  fontFamily: isRtl ? '"Amiri", serif' : undefined,
+                  fontFamily: isRtl ? 'var(--font-urdu-var)' : undefined,
                   color: 'var(--grove-purple)',
                   opacity: 0.85,
                   lineHeight: isRtl ? 2.4 : 1.8,
@@ -362,7 +362,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
                 {tafseerText}
               </div>
               <div className="mt-6 pt-4 border-t text-[10px] italic opacity-35 flex items-center gap-1.5"
-                style={{ borderColor: 'color-mix(in srgb, var(--grove-teal) 15%, transparent)', color: 'var(--grove-teal)', direction: 'rtl', textAlign: 'right', fontFamily: '"Amiri", serif' }}>
+                style={{ borderColor: 'color-mix(in srgb, var(--grove-teal) 15%, transparent)', color: 'var(--grove-teal)', direction: 'rtl', textAlign: 'right', fontFamily: 'var(--font-arabic-var)' }}>
                 📚 {isUrdu ? meta.sourceUr : meta.sourceEn}
               </div>
             </div>
@@ -400,7 +400,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
                 border: '1px solid color-mix(in srgb, var(--grove-purple) 10%, transparent)',
                 fontSize: `${Math.max(13, fontSize * 0.45)}px`,
                 direction: isUrdu ? 'rtl' : 'ltr',
-                fontFamily: isUrdu ? '"Amiri", serif' : undefined,
+                fontFamily: isUrdu ? 'var(--font-urdu-var)' : undefined,
               }}
             />
             <div className="flex justify-end mt-4">

@@ -192,11 +192,11 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
         <p className="text-xl mb-8 font-medium opacity-50" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
           {nameTranslation}
         </p>
-        <div className="text-6xl mb-10" style={{ fontFamily: '"Amiri", serif', color: 'var(--grove-purple)' }}>
+        <div className="text-6xl mb-10" style={{ fontFamily: 'var(--font-arabic-var)', color: 'var(--grove-purple)' }}>
           {surah.name}
         </div>
         {surah.number !== 1 && surah.number !== 9 && (
-          <div className="text-4xl py-10 border-y" style={{ fontFamily: '"Amiri", serif', color: 'var(--grove-green)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
+          <div className="text-4xl py-10 border-y" style={{ fontFamily: 'var(--font-arabic-var)', color: 'var(--grove-green)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
             بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
           </div>
         )}
@@ -229,7 +229,7 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
         )}
         {tafseerError && <span className="text-[10px] text-red-500 font-medium">{tafseerError}</span>}
         {selectedTafseer && !isTafseerLoading && tafseerMap.size > 0 && TAFSEER_META[selectedTafseer] && (
-          <span className="text-[10px] opacity-35 italic" style={{ color: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>
+          <span className="text-[10px] opacity-35 italic" style={{ color: 'var(--grove-purple)', fontFamily: 'var(--font-arabic-var)' }}>
             {isUrdu ? TAFSEER_META[selectedTafseer].sourceUr : TAFSEER_META[selectedTafseer].sourceEn}
           </span>
         )}
@@ -284,7 +284,7 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
             style={{
               backgroundColor: autoPlay ? 'var(--grove-purple)' : 'color-mix(in srgb, var(--grove-purple) 10%, transparent)',
               color: autoPlay ? 'white' : 'var(--grove-purple)',
-              fontFamily: isUrdu ? '"Amiri", serif' : undefined,
+              fontFamily: isUrdu ? 'var(--font-urdu-var)' : undefined,
               fontSize: isUrdu ? '13px' : undefined,
             }}
           >
