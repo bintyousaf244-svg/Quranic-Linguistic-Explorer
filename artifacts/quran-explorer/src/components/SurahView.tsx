@@ -12,9 +12,10 @@ interface SurahViewProps {
   notes: Note[];
   onSaveNote: (surahNumber: number, ayahNumber: number, content: string) => void;
   fontSize: number;
+  scrollToAyah?: number;
 }
 
-export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSaveNote, fontSize }) => {
+export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSaveNote, fontSize, scrollToAyah }) => {
   const { lang, t } = useLanguage();
   const isUrdu = lang === 'ur';
 
@@ -35,6 +36,15 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [surah.number]);
+
+  // Scroll to a specific ayah once content loads
+  useEffect(() => {
+    if (!scrollToAyah || isLoading) return;
+    const el = document.getElementById(`ayah-${surah.number}-${scrollToAyah}`);
+    if (el) {
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+    }
+  }, [scrollToAyah, isLoading, surah.number]);
 
   const revelationLabel = (type: string) => {
     if (type === 'Meccan') return t('meccan');
@@ -100,15 +110,17 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
 
       <div className="max-w-4xl mx-auto">
         {detail.ayahs.map((ayah) => (
-          <AyahCard
-            key={ayah.number}
-            ayah={ayah}
-            surahName={surah.englishName}
-            surahNumber={surah.number}
-            note={notes.find(n => n.surahNumber === surah.number && n.ayahNumber === ayah.numberInSurah)}
-            onSaveNote={(content) => onSaveNote(surah.number, ayah.numberInSurah, content)}
-            fontSize={fontSize}
-          />
+          <div key={ayah.number} id={`ayah-${surah.number}-${ayah.numberInSurah}`}>
+            <AyahCard
+              ayah={ayah}
+              surahName={surah.englishName}
+              surahNumber={surah.number}
+              note={notes.find(n => n.surahNumber === surah.number && n.ayahNumber === ayah.numberInSurah)}
+              onSaveNote={(content) => onSaveNote(surah.number, ayah.numberInSurah, content)}
+              fontSize={fontSize}
+              highlighted={scrollToAyah === ayah.numberInSurah}
+            />
+          </div>
         ))}
       </div>
 

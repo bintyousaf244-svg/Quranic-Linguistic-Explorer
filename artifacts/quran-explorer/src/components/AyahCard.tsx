@@ -13,9 +13,10 @@ interface AyahCardProps {
   note?: Note;
   onSaveNote: (content: string) => void;
   fontSize: number;
+  highlighted?: boolean;
 }
 
-export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber, note, onSaveNote, fontSize }) => {
+export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber, note, onSaveNote, fontSize, highlighted }) => {
   const { lang, t } = useLanguage();
 
   const [activeTabs, setActiveTabs] = useState<string[]>([]);
@@ -201,7 +202,15 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
 
   return (
     <div className="rounded-[2rem] overflow-hidden mb-8 transition-all border"
-      style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
+      style={{
+        backgroundColor: 'var(--grove-paper)',
+        borderColor: highlighted
+          ? 'var(--grove-gold)'
+          : 'color-mix(in srgb, var(--grove-purple) 6%, transparent)',
+        boxShadow: highlighted
+          ? '0 0 0 3px color-mix(in srgb, var(--grove-gold) 25%, transparent)'
+          : undefined,
+      }}>
       <div className="p-8 md:p-10">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">

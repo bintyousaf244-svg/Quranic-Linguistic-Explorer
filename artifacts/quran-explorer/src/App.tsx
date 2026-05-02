@@ -12,9 +12,10 @@ import { VerbConjugation } from './components/VerbConjugation';
 import { RootSearch } from './components/RootSearch';
 import { ThematicSearch } from './components/ThematicSearch';
 import { getAllSurahs } from './services/quranService';
-import { getAllNotes, saveNote } from './services/notesService';
+import { getAllNotes, saveNote, deleteNote } from './services/notesService';
+import { NotesPanel } from './components/NotesPanel';
 import { Surah, Note } from './types';
-import { Loader2, BookOpen, Star, Languages, GitBranch, Sparkles, Clock } from 'lucide-react';
+import { Loader2, BookOpen, Star, Languages, GitBranch, Sparkles, Clock, FileText } from 'lucide-react';
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
@@ -95,6 +96,8 @@ function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [notes, setNotes] = useState<Note[]>([]);
   const [recentNums, setRecentNums] = useState<number[]>(getRecentNums());
+  const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
+  const [targetAyah, setTargetAyah] = useState<number | undefined>(undefined);
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
   const [isConjugationOpen, setIsConjugationOpen] = useState(false);
   const [isRootSearchOpen, setIsRootSearchOpen] = useState(false);
@@ -155,9 +158,31 @@ function AppContent() {
     }
   };
 
+  const handleDeleteNote = (surahNumber: number, ayahNumber: number) => {
+    deleteNote(surahNumber, ayahNumber);
+    setNotes(getAllNotes());
+    if (isSignedIn) {
+      fetch(`${basePath}/api/notes/${surahNumber}/${ayahNumber}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      }).catch(() => {});
+    }
+  };
+
+  const handleNavigateToNote = (surahNumber: number, ayahNumber: number) => {
+    const s = surahs.find(x => x.number === surahNumber);
+    if (!s) return;
+    setIsNotesPanelOpen(false);
+    setTargetAyah(ayahNumber);
+    pushRecent(s.number);
+    setRecentNums(getRecentNums());
+    setSelectedSurah(s);
+  };
+
   const handleSelectSurah = (s: Surah) => {
     pushRecent(s.number);
     setRecentNums(getRecentNums());
+    setTargetAyah(undefined);
     setSelectedSurah(s);
   };
 
@@ -194,6 +219,16 @@ function AppContent() {
         />
       )}
 
+      {isNotesPanelOpen && (
+        <NotesPanel
+          notes={notes}
+          surahs={surahs}
+          onClose={() => setIsNotesPanelOpen(false)}
+          onNavigate={handleNavigateToNote}
+          onDeleteNote={handleDeleteNote}
+        />
+      )}
+
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-32 gap-4">
           <Loader2 className="animate-spin" size={40} style={{ color: 'var(--grove-green)' }} />
@@ -204,10 +239,11 @@ function AppContent() {
       ) : selectedSurah ? (
         <SurahView
           surah={selectedSurah}
-          onBack={() => setSelectedSurah(null)}
+          onBack={() => { setSelectedSurah(null); setTargetAyah(undefined); }}
           notes={notes}
           onSaveNote={handleSaveNote}
           fontSize={fontSize}
+          scrollToAyah={targetAyah}
         />
       ) : (
         <div className="space-y-12">
@@ -249,6 +285,31 @@ function AppContent() {
               </button>
             ))}
           </div>
+
+          {/* My Notes shortcut */}
+          {notes.filter(n => n.content.trim()).length > 0 && (
+            <button
+              onClick={() => setIsNotesPanelOpen(true)}
+              className="w-full flex items-center gap-4 p-5 rounded-2xl border text-left transition-all hover:shadow-md hover:scale-[1.005] group"
+              style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}
+            >
+              <div className="p-2.5 rounded-xl shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-pink) 12%, transparent)' }}>
+                <FileText size={20} style={{ color: 'var(--grove-pink)' }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm" style={{ color: 'var(--grove-purple)' }}>
+                  {t('langToggle') === 'English' ? 'میرے نوٹس' : 'My Notes'}
+                </div>
+                <div className="text-[11px] opacity-55 mt-0.5" style={{ color: 'var(--grove-purple)' }}>
+                  {notes.filter(n => n.content.trim()).length}{' '}
+                  {t('langToggle') === 'English' ? 'نوٹ محفوظ ہیں' : `saved note${notes.filter(n => n.content.trim()).length !== 1 ? 's' : ''} across ${new Set(notes.filter(n => n.content.trim()).map(n => n.surahNumber)).size} surah${new Set(notes.filter(n => n.content.trim()).map(n => n.surahNumber)).size !== 1 ? 's' : ''}`}
+                </div>
+              </div>
+              <div className="text-xs font-bold opacity-40 group-hover:opacity-70 transition-opacity shrink-0" style={{ color: 'var(--grove-purple)' }}>
+                {t('langToggle') === 'English' ? 'دیکھیں' : 'View all →'}
+              </div>
+            </button>
+          )}
 
           {/* Recently Viewed */}
           {recentSurahs.length > 0 && (

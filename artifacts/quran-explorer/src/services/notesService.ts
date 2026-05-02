@@ -19,6 +19,13 @@ export function getAllNotes(): Note[] {
   return loadNotes();
 }
 
+export function deleteNote(surahNumber: number, ayahNumber: number): void {
+  const notes = loadNotes().filter(
+    n => !(n.surahNumber === surahNumber && n.ayahNumber === ayahNumber)
+  );
+  saveNotes(notes);
+}
+
 export function saveNote(surahNumber: number, ayahNumber: number, content: string): Note {
   const notes = loadNotes();
   const existing = notes.find(n => n.surahNumber === surahNumber && n.ayahNumber === ayahNumber);
