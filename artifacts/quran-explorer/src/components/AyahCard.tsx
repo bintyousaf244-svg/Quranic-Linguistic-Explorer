@@ -55,6 +55,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
   const [rootFamily, setRootFamily] = useState<RootFamilyMatch[]>([]);
   const [rootFamilyCount, setRootFamilyCount] = useState<number | undefined>(undefined);
   const [isRootFamilyLoading, setIsRootFamilyLoading] = useState(false);
+  const [wordAudioUrl, setWordAudioUrl] = useState<string | null>(null);
 
   const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
@@ -127,6 +128,10 @@ export const AyahCard: React.FC<AyahCardProps> = ({
     const word = raw.replace(/[﴿﴾۝۞۩\u0600-\u0605\u061C\u06DD]/g, '').trim();
     if (!word) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const s = String(surahNumber).padStart(3, '0');
+    const a = String(ayah.numberInSurah).padStart(3, '0');
+    const w = String(wordIndex + 1).padStart(3, '0');
+    setWordAudioUrl(`https://audio.qurancdn.com/wbw/${s}_${a}_${w}.mp3`);
     setActiveWord(word);
     setWordInfo(null);
     setRootFamily([]);
@@ -525,12 +530,13 @@ export const AyahCard: React.FC<AyahCardProps> = ({
           info={wordInfo}
           isLoading={isWordLoading}
           position={wordPopupPos}
-          onClose={() => { setActiveWord(null); setRootFamily([]); setRootFamilyCount(undefined); }}
+          onClose={() => { setActiveWord(null); setRootFamily([]); setRootFamilyCount(undefined); setWordAudioUrl(null); }}
           onOpenDictionary={(w) => onWordSearch?.(w)}
           rootFamily={rootFamily}
           rootFamilyCount={rootFamilyCount}
           isRootFamilyLoading={isRootFamilyLoading}
           onRootSearch={onRootSearch}
+          audioUrl={wordAudioUrl ?? undefined}
         />
       )}
     </div>

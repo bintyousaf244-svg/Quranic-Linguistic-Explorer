@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { X, ExternalLink, Loader2, GitBranch } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { X, ExternalLink, Loader2, GitBranch, Volume2, Square } from 'lucide-react';
 
 export interface WordInfo {
   root?: string;
@@ -29,13 +29,16 @@ interface WordPopupProps {
   rootFamilyCount?: number;
   isRootFamilyLoading?: boolean;
   onRootSearch?: (root: string) => void;
+  audioUrl?: string;
 }
 
 export const WordPopup: React.FC<WordPopupProps> = ({
   word, info, isLoading, position, onClose, onOpenDictionary,
-  rootFamily, rootFamilyCount, isRootFamilyLoading, onRootSearch,
+  rootFamily, rootFamilyCount, isRootFamilyLoading, onRootSearch, audioUrl,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -44,6 +47,32 @@ export const WordPopup: React.FC<WordPopupProps> = ({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [onClose]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleAudio = () => {
+    if (isAudioPlaying && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsAudioPlaying(false);
+      return;
+    }
+    if (!audioUrl) return;
+    if (audioRef.current) audioRef.current.pause();
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    audio.onended = () => setIsAudioPlaying(false);
+    audio.onerror = () => setIsAudioPlaying(false);
+    audio.play().catch(() => setIsAudioPlaying(false));
+    setIsAudioPlaying(true);
+  };
 
   const left = Math.min(Math.max(position.x - 150, 8), window.innerWidth - 312);
   const isAbove = position.y > window.innerHeight * 0.55;
@@ -77,10 +106,27 @@ export const WordPopup: React.FC<WordPopupProps> = ({
         <div className="px-4 pt-4 pb-3 flex items-start justify-between gap-2"
           style={{ borderBottom: '1px solid color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
           <div className="flex flex-col gap-1 min-w-0">
-            <span className="text-3xl leading-tight" dir="rtl"
-              style={{ fontFamily: 'var(--font-arabic-var)', color: 'var(--grove-purple)' }}>
-              {word}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-3xl leading-tight" dir="rtl"
+                style={{ fontFamily: 'var(--font-arabic-var)', color: 'var(--grove-purple)' }}>
+                {word}
+              </span>
+              {audioUrl && (
+                <button
+                  onClick={handleAudio}
+                  title={isAudioPlaying ? 'Stop' : 'Play pronunciation'}
+                  className="flex items-center justify-center w-7 h-7 rounded-full transition-all hover:opacity-70 shrink-0"
+                  style={{
+                    backgroundColor: isAudioPlaying
+                      ? 'color-mix(in srgb, var(--grove-green) 18%, transparent)'
+                      : 'color-mix(in srgb, var(--grove-purple) 8%, transparent)',
+                    color: isAudioPlaying ? 'var(--grove-green)' : 'var(--grove-purple)',
+                  }}
+                >
+                  {isAudioPlaying ? <Square size={10} fill="currentColor" /> : <Volume2 size={12} />}
+                </button>
+              )}
+            </div>
             {info?.source === 'classical' && (
               <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full self-start"
                 style={{ backgroundColor: 'color-mix(in srgb, var(--grove-green) 15%, transparent)', color: 'var(--grove-green)' }}>
