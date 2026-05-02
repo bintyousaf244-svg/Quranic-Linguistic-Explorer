@@ -29,9 +29,8 @@ export const strings = {
     tabTafseer: 'Tafseer',
 
     tafseerOff: 'Off',
-    tafseerIbnKathir: 'Ibn Katheer',
-    tafseerJalalayn: 'Al-Jalalayn (Arabic)',
-    tafseerMuyassar: 'Al-Muyassar (Arabic)',
+    tafseerIbnKathir: 'Ibn Katheer (English)',
+    tafseerMaarif: "Ma'ariful Quran (Urdu)",
     tafseerLoading: 'Loading tafseer...',
     tafseerLabel: 'Tafseer',
     bookmarkLabel: 'Bookmarks',
@@ -125,9 +124,8 @@ export const strings = {
     tabTafseer: 'تفسیر',
 
     tafseerOff: 'بند',
-    tafseerIbnKathir: 'ابن کثیر',
-    tafseerJalalayn: 'الجلالین (عربی)',
-    tafseerMuyassar: 'المیسر (عربی)',
+    tafseerIbnKathir: 'ابن کثیر (انگریزی)',
+    tafseerMaarif: 'معارف القرآن (اردو)',
     tafseerLoading: 'تفسیر لا رہے ہیں...',
     tafseerLabel: 'تفسیر',
     bookmarkLabel: 'بُک مارکس',

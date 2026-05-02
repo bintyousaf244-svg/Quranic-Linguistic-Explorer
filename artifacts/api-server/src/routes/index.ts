@@ -7,6 +7,7 @@ import thematicSearchRouter from "./thematicSearch";
 import tasreefRouter from "./tasreef";
 import notesRouter from "./notes";
 import bookmarksRouter from "./bookmarks";
+import tafseerProxyRouter from "./tafseerProxy";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(thematicSearchRouter);
 router.use(tasreefRouter);
 router.use(notesRouter);
 router.use(bookmarksRouter);
+router.use(tafseerProxyRouter);
 
 export default router;

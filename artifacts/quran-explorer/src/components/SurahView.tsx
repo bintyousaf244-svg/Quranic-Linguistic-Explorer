@@ -144,8 +144,8 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
 
   const tafseerOptions: { value: TafseerEdition | null; label: string }[] = [
     { value: null, label: t('tafseerOff') },
-    { value: 'ar.jalalayn', label: t('tafseerJalalayn') },
-    { value: 'ar.muyassar', label: t('tafseerMuyassar') },
+    { value: 'en.kathir', label: t('tafseerIbnKathir') },
+    { value: 'ur.maarifulquran', label: t('tafseerMaarif') },
   ];
 
   const reciterOptions: { value: ReciterId | null; label: string }[] = [
@@ -218,7 +218,7 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
           </div>
         )}
         {tafseerError && <span className="text-[10px] text-red-500 font-medium">{tafseerError}</span>}
-        {selectedTafseer && !isTafseerLoading && tafseerMap.size > 0 && (
+        {selectedTafseer && !isTafseerLoading && tafseerMap.size > 0 && TAFSEER_META[selectedTafseer] && (
           <span className="text-[10px] opacity-35 italic" style={{ color: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>
             {isUrdu ? TAFSEER_META[selectedTafseer].sourceUr : TAFSEER_META[selectedTafseer].sourceEn}
           </span>
