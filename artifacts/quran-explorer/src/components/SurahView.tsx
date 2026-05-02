@@ -18,9 +18,10 @@ interface SurahViewProps {
   scrollToAyah?: number;
   bookmarks: Bookmark[];
   onToggleBookmark: (surahNumber: number, ayahNumber: number) => void;
+  onWordSearch?: (word: string) => void;
 }
 
-export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSaveNote, fontSize, scrollToAyah, bookmarks, onToggleBookmark }) => {
+export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSaveNote, fontSize, scrollToAyah, bookmarks, onToggleBookmark, onWordSearch }) => {
   const { lang, t } = useLanguage();
   const isUrdu = lang === 'ur';
 
@@ -189,7 +190,7 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
         <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-3" style={{ color: 'var(--grove-purple)' }}>
           {surah.englishName}
         </h2>
-        <p className="text-xl mb-8 font-medium opacity-50" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+        <p className="text-xl mb-8 font-medium opacity-50" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? 'var(--font-urdu-var)' : undefined }}>
           {nameTranslation}
         </p>
         <div className="text-6xl mb-10" style={{ fontFamily: 'var(--font-arabic-var)', color: 'var(--grove-purple)' }}>
@@ -294,7 +295,7 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
         )}
 
         {playingAyah !== null && (
-          <span className="text-[10px] font-bold opacity-60 flex items-center gap-1" style={{ color: 'var(--grove-green)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+          <span className="text-[10px] font-bold opacity-60 flex items-center gap-1" style={{ color: 'var(--grove-green)', fontFamily: isUrdu ? 'var(--font-urdu-var)' : undefined }}>
             ▶ {isUrdu ? `آیت ${playingAyah}` : `Ayah ${playingAyah}`}
           </span>
         )}
@@ -319,6 +320,7 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
               onPause={() => { stopAyahAudio(); setPlayingAyah(null); }}
               isBookmarked={bookmarks.some(b => b.surahNumber === surah.number && b.ayahNumber === ayah.numberInSurah)}
               onToggleBookmark={() => onToggleBookmark(surah.number, ayah.numberInSurah)}
+              onWordSearch={onWordSearch}
             />
           </div>
         ))}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Loader2, X, Languages } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { streamAnalysis } from '../services/analysisService';
@@ -6,13 +6,37 @@ import { AnalysisCache } from '../services/cacheService';
 
 interface WordSearchProps {
   onClose: () => void;
+  initialWord?: string;
 }
 
-export const WordSearch: React.FC<WordSearchProps> = ({ onClose }) => {
-  const [query, setQuery] = useState('');
+export const WordSearch: React.FC<WordSearchProps> = ({ onClose, initialWord }) => {
+  const [query, setQuery] = useState(initialWord ?? '');
   const [result, setResult] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (initialWord?.trim()) {
+      runSearch(initialWord.trim());
+    }
+  }, []);
+
+  const runSearch = async (word: string) => {
+    const cached = AnalysisCache.getWord(word);
+    if (cached) { setResult(cached); return; }
+    setIsLoading(true);
+    setResult('');
+    setError('');
+    try {
+      let fullText = '';
+      await streamAnalysis('word', { word }, (text) => { fullText = text; setResult(text); });
+      if (fullText) AnalysisCache.setWord(word, fullText);
+    } catch {
+      setError('Failed to fetch definition. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();

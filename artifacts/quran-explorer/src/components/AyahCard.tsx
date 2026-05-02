@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Ayah, Note } from '../types';
 import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked, Play, Pause, Volume2, Bookmark } from 'lucide-react';
+import { WordPopup, WordInfo } from './WordPopup';
 import ReactMarkdown from 'react-markdown';
 import { streamAnalysis, fetchAuthenticGrammar } from '../services/analysisService';
 import { AnalysisCache } from '../services/cacheService';
@@ -23,12 +24,13 @@ interface AyahCardProps {
   onPause?: () => void;
   isBookmarked?: boolean;
   onToggleBookmark?: () => void;
+  onWordSearch?: (word: string) => void;
 }
 
 export const AyahCard: React.FC<AyahCardProps> = ({
   ayah, surahName, surahNumber, note, onSaveNote, fontSize, highlighted,
   tafseerText, tafseerEdition, hasReciter, isPlaying, onPlay, onPause,
-  isBookmarked, onToggleBookmark,
+  isBookmarked, onToggleBookmark, onWordSearch,
 }) => {
   const { lang, t } = useLanguage();
 
@@ -44,6 +46,49 @@ export const AyahCard: React.FC<AyahCardProps> = ({
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
   const [copiedType, setCopiedType] = useState<string | null>(null);
+
+  const [activeWord, setActiveWord] = useState<string | null>(null);
+  const [wordInfo, setWordInfo] = useState<WordInfo | null>(null);
+  const [wordPopupPos, setWordPopupPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isWordLoading, setIsWordLoading] = useState(false);
+
+  const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+  const fetchWordInfo = async (word: string) => {
+    const cacheKey = `word_popup_v1_${word}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) { setWordInfo(JSON.parse(cached)); return; }
+    } catch { /* ignore */ }
+
+    setIsWordLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/word-lookup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data: WordInfo = await res.json();
+      setWordInfo(data);
+      try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch { /* ignore */ }
+    } catch {
+      setWordInfo({});
+    } finally {
+      setIsWordLoading(false);
+    }
+  };
+
+  const handleWordClick = (raw: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const word = raw.replace(/[﴿﴾۝۞۩\u0600-\u0605\u061C\u06DD]/g, '').trim();
+    if (!word) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setActiveWord(word);
+    setWordInfo(null);
+    setWordPopupPos({ x: rect.left + rect.width / 2, y: rect.top });
+    fetchWordInfo(word);
+  };
 
   useEffect(() => {
     setActiveTranslation(lang === 'ur' ? 'ur' : 'en');
@@ -280,7 +325,18 @@ export const AyahCard: React.FC<AyahCardProps> = ({
 
         <div className="text-right mb-10" dir="rtl">
           <p className="leading-loose font-arabic" style={{ fontSize: `${fontSize}px`, fontFamily: 'var(--font-arabic-var)', color: 'var(--grove-purple)' }}>
-            {ayah.text}
+            {ayah.text.split(' ').map((word, i) => (
+              <span
+                key={i}
+                onClick={(e) => handleWordClick(word, e)}
+                className="inline-block cursor-pointer rounded-md px-0.5 mx-[1px] transition-colors duration-150"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--grove-purple) 8%, transparent)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
+              >
+                {word}
+              </span>
+            ))}
           </p>
         </div>
 
@@ -408,7 +464,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
                 onClick={handleSaveNote}
                 disabled={isSavingNote}
                 className="flex items-center gap-2 px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest text-white transition-all disabled:opacity-50 shadow-lg active:scale-95"
-                style={{ backgroundColor: 'var(--grove-pink)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}
+                style={{ backgroundColor: 'var(--grove-pink)', fontFamily: isUrdu ? 'var(--font-urdu-var)' : undefined }}
               >
                 {isSavingNote ? <Loader2 className="animate-spin" size={16} /> : noteSaved ? <Check size={16} /> : <Save size={16} />}
                 {noteSaved ? t('saved') : t('saveNote')}
@@ -417,6 +473,17 @@ export const AyahCard: React.FC<AyahCardProps> = ({
           </div>
         )}
       </div>
+
+      {activeWord && (
+        <WordPopup
+          word={activeWord}
+          info={wordInfo}
+          isLoading={isWordLoading}
+          position={wordPopupPos}
+          onClose={() => setActiveWord(null)}
+          onOpenDictionary={(w) => onWordSearch?.(w)}
+        />
+      )}
     </div>
   );
 };

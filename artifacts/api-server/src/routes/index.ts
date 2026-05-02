@@ -8,6 +8,7 @@ import tasreefRouter from "./tasreef";
 import notesRouter from "./notes";
 import bookmarksRouter from "./bookmarks";
 import tafseerProxyRouter from "./tafseerProxy";
+import wordLookupRouter from "./wordLookup";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(tasreefRouter);
 router.use(notesRouter);
 router.use(bookmarksRouter);
 router.use(tafseerProxyRouter);
+router.use(wordLookupRouter);
 
 export default router;

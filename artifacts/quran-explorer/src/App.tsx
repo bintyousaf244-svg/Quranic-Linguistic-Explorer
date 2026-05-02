@@ -103,6 +103,7 @@ function AppContent() {
   const [isBookmarksPanelOpen, setIsBookmarksPanelOpen] = useState(false);
   const [targetAyah, setTargetAyah] = useState<number | undefined>(undefined);
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
+  const [wordSearchInitial, setWordSearchInitial] = useState<string | undefined>(undefined);
   const [isConjugationOpen, setIsConjugationOpen] = useState(false);
   const [isRootSearchOpen, setIsRootSearchOpen] = useState(false);
   const [isThematicOpen, setIsThematicOpen] = useState(false);
@@ -283,7 +284,7 @@ function AppContent() {
       fontSettings={fontSettings}
       onFontChange={(type, font) => setFontSettings((prev: FontSettings) => ({ ...prev, [type]: font }))}
     >
-      {isDictionaryOpen && <WordSearch onClose={() => setIsDictionaryOpen(false)} />}
+      {isDictionaryOpen && <WordSearch onClose={() => { setIsDictionaryOpen(false); setWordSearchInitial(undefined); }} initialWord={wordSearchInitial} />}
       {isConjugationOpen && <VerbConjugation onClose={() => setIsConjugationOpen(false)} />}
       {isRootSearchOpen && (
         <RootSearch
@@ -340,6 +341,7 @@ function AppContent() {
           scrollToAyah={targetAyah}
           bookmarks={bookmarks}
           onToggleBookmark={handleToggleBookmark}
+          onWordSearch={(word) => { setWordSearchInitial(word); setIsDictionaryOpen(true); }}
         />
       ) : (
         <div className="space-y-12">
