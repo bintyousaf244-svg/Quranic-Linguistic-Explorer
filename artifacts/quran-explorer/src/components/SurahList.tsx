@@ -1,6 +1,8 @@
 import React from 'react';
 import { Surah } from '../types';
 import { ChevronRight } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { surahUrduMeanings } from '../lib/surahUrduNames';
 
 interface SurahListProps {
   surahs: Surah[];
@@ -9,10 +11,23 @@ interface SurahListProps {
 }
 
 export const SurahList: React.FC<SurahListProps> = ({ surahs, onSelect, selectedSurahNumber }) => {
+  const { lang, t } = useLanguage();
+  const isUrdu = lang === 'ur';
+
+  const revelationLabel = (type: string) => {
+    if (type === 'Meccan') return t('meccan');
+    if (type === 'Medinan') return t('medinan');
+    return type;
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {surahs.map((surah) => {
         const isSelected = selectedSurahNumber === surah.number;
+        const meaning = isUrdu
+          ? surahUrduMeanings[surah.number] ?? surah.englishNameTranslation
+          : surah.englishNameTranslation;
+
         return (
           <button
             key={surah.number}
@@ -37,9 +52,17 @@ export const SurahList: React.FC<SurahListProps> = ({ surahs, onSelect, selected
                 <h3 className="font-bold transition-colors" style={{ color: isSelected ? 'white' : 'var(--grove-purple)' }}>
                   {surah.englishName}
                 </h3>
-                <p className="text-[10px] font-bold uppercase tracking-wider opacity-60">
-                  {surah.numberOfAyahs} Ayahs · {surah.revelationType}
+                <p
+                  className="text-[10px] font-bold uppercase tracking-wider opacity-60"
+                  style={{ fontFamily: isUrdu ? '"Amiri", serif' : undefined, fontSize: isUrdu ? '12px' : undefined }}
+                >
+                  {surah.numberOfAyahs} {t('ayahs')} · {revelationLabel(surah.revelationType)}
                 </p>
+                {isUrdu && meaning && (
+                  <p className="text-xs mt-0.5 opacity-70" style={{ fontFamily: '"Amiri", serif', color: isSelected ? 'rgba(255,255,255,0.8)' : 'var(--grove-green)' }}>
+                    {meaning}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">

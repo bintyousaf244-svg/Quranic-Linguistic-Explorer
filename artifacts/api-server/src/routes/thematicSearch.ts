@@ -39,6 +39,9 @@ router.get('/thematic-search', async (req, res) => {
   }
 
   const theme = q.trim();
+  const edition = typeof req.query.edition === 'string' ? req.query.edition : 'en.sahih';
+  const lang = typeof req.query.lang === 'string' ? req.query.lang : 'en';
+  const isUrdu = lang === 'ur';
 
   try {
     const [groqResult, searchResult] = await Promise.allSettled([
@@ -55,13 +58,13 @@ router.get('/thematic-search', async (req, res) => {
           },
           {
             role: 'user',
-            content: `English theme: "${theme}"
+            content: `${isUrdu ? 'Urdu/English' : 'English'} theme: "${theme}"
 
 Respond with this exact JSON structure:
 {
   "arabicConcept": "Arabic name of the concept (2-4 words)",
   "transliteration": "romanized transliteration of the Arabic concept",
-  "summary": "2-3 sentence overview of how this theme appears in the Quran — its importance, key verses, and Quranic perspective",
+  "summary": "${isUrdu ? '2-3 sentence overview in Urdu (اردو میں) of how this theme appears in the Quran' : '2-3 sentence overview of how this theme appears in the Quran — its importance, key verses, and Quranic perspective'}",
   "roots": [
     {"root": "رحم", "meaning": "mercy / compassion", "note": "Core root, appears ~114 times"},
     {"root": "غفر", "meaning": "forgiveness", "note": "Divine forgiveness as expression of mercy"}
@@ -74,7 +77,7 @@ Include 3-5 of the most relevant roots. Roots must be 3-letter Arabic roots (ا�
       }),
 
       fetch(
-        `https://api.alquran.cloud/v1/search/${encodeURIComponent(theme)}/all/en.sahih`,
+        `https://api.alquran.cloud/v1/search/${encodeURIComponent(theme)}/all/${encodeURIComponent(edition)}`,
         { headers: { 'User-Agent': 'Mozilla/5.0' } }
       ),
     ]);

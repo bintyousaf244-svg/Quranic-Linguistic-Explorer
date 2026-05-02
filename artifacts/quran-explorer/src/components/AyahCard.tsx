@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Ayah, Note } from '../types';
 import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { streamAnalysis, fetchAuthenticGrammar } from '../services/analysisService';
 import { AnalysisCache } from '../services/cacheService';
+import { useLanguage } from '../context/LanguageContext';
 
 interface AyahCardProps {
   ayah: Ayah;
@@ -15,8 +16,10 @@ interface AyahCardProps {
 }
 
 export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber, note, onSaveNote, fontSize }) => {
+  const { lang, t } = useLanguage();
+
   const [activeTabs, setActiveTabs] = useState<string[]>([]);
-  const [activeTranslation, setActiveTranslation] = useState<'en' | 'ur' | 'ar' | 'none'>('en');
+  const [activeTranslation, setActiveTranslation] = useState<'en' | 'ur' | 'ar' | 'none'>(lang === 'ur' ? 'ur' : 'en');
   const [grammarAnalysis, setGrammarAnalysis] = useState('');
   const [grammarSourceLabel, setGrammarSourceLabel] = useState('');
   const [grammarIsAuthentic, setGrammarIsAuthentic] = useState(false);
@@ -27,6 +30,10 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
   const [copiedType, setCopiedType] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActiveTranslation(lang === 'ur' ? 'ur' : 'en');
+  }, [lang]);
 
   const handleCopy = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
@@ -106,6 +113,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
   };
 
   const analysisFontSize = Math.max(15, fontSize * 0.55);
+  const isUrdu = lang === 'ur';
 
   const TabBtn = ({ id, label, icon: Icon, color }: { id: string; label: string; icon: any; color: string }) => (
     <button
@@ -115,7 +123,9 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
         backgroundColor: activeTabs.includes(id)
           ? color
           : `color-mix(in srgb, ${color} 12%, transparent)`,
-        color: activeTabs.includes(id) ? 'white' : color
+        color: activeTabs.includes(id) ? 'white' : color,
+        fontFamily: isUrdu ? '"Amiri", serif' : undefined,
+        fontSize: isUrdu ? '13px' : undefined,
       }}
     >
       <Icon size={14} />
@@ -141,7 +151,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
             {isGrammar && grammarIsAuthentic && content && (
               <span className="text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
                 style={{ backgroundColor: `color-mix(in srgb, var(--grove-green) 15%, transparent)`, color: 'var(--grove-green)' }}>
-                Authentic Source
+                {t('authenticSrc')}
               </span>
             )}
           </div>
@@ -159,8 +169,8 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
         {loadingStates[id] ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <Loader2 className="animate-spin" size={24} style={{ color }} />
-            <p className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color }}>
-              {isGrammar ? 'Fetching authentic I\'rab...' : 'Analyzing with AI...'}
+            <p className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color, fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+              {isGrammar ? t('loadingIrab') : t('loadingAI')}
             </p>
           </div>
         ) : (
@@ -205,10 +215,10 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
             </button>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            <TabBtn id="dictionary" label="Dictionary" icon={Languages} color="var(--grove-teal)" />
-            <TabBtn id="grammar" label="I'rab" icon={BookOpen} color="var(--grove-purple)" />
-            <TabBtn id="morphology" label="Morphology" icon={FileText} color="var(--grove-gold)" />
-            <TabBtn id="notes" label="Notes" icon={MessageSquare} color="var(--grove-pink)" />
+            <TabBtn id="dictionary" label={t('tabDict')} icon={Languages} color="var(--grove-teal)" />
+            <TabBtn id="grammar" label={t('tabIrab')} icon={BookOpen} color="var(--grove-purple)" />
+            <TabBtn id="morphology" label={t('tabMorph')} icon={FileText} color="var(--grove-gold)" />
+            <TabBtn id="notes" label={t('tabNotes')} icon={MessageSquare} color="var(--grove-pink)" />
           </div>
         </div>
 
@@ -220,19 +230,21 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
 
         <div className="border-t pt-8" style={{ borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
           <div className="flex items-center gap-3 mb-6 flex-wrap">
-            {(['en', 'ur', 'ar', 'none'] as const).map((lang) => (
+            {(['en', 'ur', 'ar', 'none'] as const).map((tLang) => (
               <button
-                key={lang}
-                onClick={() => setActiveTranslation(lang)}
+                key={tLang}
+                onClick={() => setActiveTranslation(tLang)}
                 className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all"
                 style={{
-                  backgroundColor: activeTranslation === lang
-                    ? (lang === 'none' ? 'var(--grove-pink)' : 'var(--grove-purple)')
+                  backgroundColor: activeTranslation === tLang
+                    ? (tLang === 'none' ? 'var(--grove-pink)' : 'var(--grove-purple)')
                     : 'transparent',
-                  color: activeTranslation === lang ? 'white' : `color-mix(in srgb, var(--grove-purple) 50%, transparent)`
+                  color: activeTranslation === tLang ? 'white' : `color-mix(in srgb, var(--grove-purple) 50%, transparent)`,
+                  fontFamily: tLang === 'ur' || tLang === 'ar' || isUrdu ? '"Amiri", serif' : undefined,
+                  fontSize: isUrdu ? '13px' : undefined,
                 }}
               >
-                {lang === 'en' ? 'English' : lang === 'ur' ? 'Urdu' : lang === 'ar' ? 'Arabic (Tafsir)' : 'Hide'}
+                {tLang === 'en' ? t('transEn') : tLang === 'ur' ? t('transUr') : tLang === 'ar' ? t('transAr') : t('transHide')}
               </button>
             ))}
           </div>
@@ -246,10 +258,10 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
                 {activeTranslation === 'ur' && ayah.translations?.ur}
                 {activeTranslation === 'ar' && ayah.translations?.ar}
               </p>
-              <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--grove-gold)' }}>
-                {activeTranslation === 'en' && 'Sahih International'}
-                {activeTranslation === 'ur' && 'Fateh Muhammad Jalandhry'}
-                {activeTranslation === 'ar' && 'Tafsir al-Jalalayn'}
+              <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--grove-gold)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+                {activeTranslation === 'en' && t('srcSahih')}
+                {activeTranslation === 'ur' && t('srcJalandhry')}
+                {activeTranslation === 'ar' && t('srcJalalayn')}
               </p>
             </div>
           )}
@@ -271,7 +283,9 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
         {activeTabs.includes('notes') && (
           <div className="p-8 md:p-10" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-pink) 6%, transparent)' }}>
             <div className="flex items-center justify-between mb-6">
-              <h4 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: 'var(--grove-pink)' }}>Personal Notes</h4>
+              <h4 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: 'var(--grove-pink)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+                {t('tabNotes')}
+              </h4>
               <button onClick={() => toggleTab('notes')} className="hover:opacity-70 transition-all" style={{ color: 'var(--grove-pink)' }}>
                 <X size={20} />
               </button>
@@ -279,13 +293,15 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
             <textarea
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
-              placeholder="Write your reflections or notes about this ayah..."
+              placeholder={t('notesPlaceholder')}
               className="w-full h-40 p-6 rounded-3xl resize-none focus:outline-none focus:ring-4 transition-all"
               style={{
                 backgroundColor: 'var(--grove-paper)',
                 color: 'var(--grove-purple)',
                 border: '1px solid color-mix(in srgb, var(--grove-purple) 10%, transparent)',
-                fontSize: `${Math.max(13, fontSize * 0.45)}px`
+                fontSize: `${Math.max(13, fontSize * 0.45)}px`,
+                direction: isUrdu ? 'rtl' : 'ltr',
+                fontFamily: isUrdu ? '"Amiri", serif' : undefined,
               }}
             />
             <div className="flex justify-end mt-4">
@@ -293,10 +309,10 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
                 onClick={handleSaveNote}
                 disabled={isSavingNote}
                 className="flex items-center gap-2 px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest text-white transition-all disabled:opacity-50 shadow-lg active:scale-95"
-                style={{ backgroundColor: 'var(--grove-pink)' }}
+                style={{ backgroundColor: 'var(--grove-pink)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}
               >
                 {isSavingNote ? <Loader2 className="animate-spin" size={16} /> : noteSaved ? <Check size={16} /> : <Save size={16} />}
-                {noteSaved ? 'Saved!' : 'Save Note'}
+                {noteSaved ? t('saved') : t('saveNote')}
               </button>
             </div>
           </div>

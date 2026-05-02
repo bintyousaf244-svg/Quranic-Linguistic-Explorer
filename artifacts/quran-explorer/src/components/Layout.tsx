@@ -1,5 +1,6 @@
 import React from 'react';
 import { Book, Search, Moon, Sun, Languages } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,6 +27,9 @@ export const Layout: React.FC<LayoutProps> = ({
   isDarkMode,
   onToggleDarkMode
 }) => {
+  const { lang, setLang, t } = useLanguage();
+  const isUrdu = lang === 'ur';
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--grove-cream)', color: 'var(--grove-purple)' }}>
       <header className="sticky top-0 z-50 border-b backdrop-blur-md px-4 py-3"
@@ -35,11 +39,11 @@ export const Layout: React.FC<LayoutProps> = ({
             <div className="p-2 rounded-lg shadow-sm text-white" style={{ backgroundColor: 'var(--grove-green)' }}>
               <Book size={20} />
             </div>
-            <h1 className="text-lg font-bold tracking-tight hidden sm:block" style={{ color: 'var(--grove-purple)' }}>
-              Quranic Linguistic Explorer
+            <h1 className="text-lg font-bold tracking-tight hidden sm:block" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+              {t('appName')}
             </h1>
             <h1 className="text-lg font-bold tracking-tight sm:hidden" style={{ color: 'var(--grove-purple)' }}>
-              QLE
+              {isUrdu ? 'ق ل ت' : 'QLE'}
             </h1>
           </div>
 
@@ -49,7 +53,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40" size={16} style={{ color: 'var(--grove-purple)' }} />
                 <input
                   type="text"
-                  placeholder="Search Surah..."
+                  placeholder={t('searchPlaceholder')}
                   className="pl-9 pr-4 py-2 rounded-full text-sm w-56 focus:outline-none focus:ring-2 transition-all"
                   style={{
                     backgroundColor: 'var(--grove-cream)',
@@ -66,10 +70,10 @@ export const Layout: React.FC<LayoutProps> = ({
               <button
                 onClick={onOpenDictionary}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all hover:opacity-80"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 12%, transparent)', color: 'var(--grove-teal)' }}
+                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 12%, transparent)', color: 'var(--grove-teal)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}
               >
                 <Languages size={16} />
-                <span className="hidden sm:inline">Dictionary</span>
+                <span className="hidden sm:inline">{t('dict')}</span>
               </button>
             )}
 
@@ -80,7 +84,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)', fontFamily: '"Amiri", serif' }}
               >
                 <span className="text-base leading-none">ص</span>
-                <span className="hidden sm:inline font-sans">Tasreef</span>
+                <span className="hidden sm:inline font-sans">{t('tasreef')}</span>
               </button>
             )}
 
@@ -91,7 +95,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 style={{ backgroundColor: 'color-mix(in srgb, var(--grove-green) 12%, transparent)', color: 'var(--grove-green)', fontFamily: '"Amiri", serif' }}
               >
                 <span className="text-base leading-none">ج</span>
-                <span className="hidden sm:inline font-sans">Roots</span>
+                <span className="hidden sm:inline font-sans">{t('roots')}</span>
               </button>
             )}
 
@@ -99,12 +103,29 @@ export const Layout: React.FC<LayoutProps> = ({
               <button
                 onClick={onOpenThematicSearch}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all hover:opacity-80"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 12%, transparent)', color: 'var(--grove-teal)' }}
+                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 12%, transparent)', color: 'var(--grove-teal)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}
               >
-                <span className="text-base leading-none">م</span>
-                <span className="hidden sm:inline">Themes</span>
+                <span className="text-base leading-none" style={{ fontFamily: '"Amiri", serif' }}>م</span>
+                <span className="hidden sm:inline">{t('themes')}</span>
               </button>
             )}
+
+            {/* Language Toggle */}
+            <button
+              onClick={() => setLang(lang === 'en' ? 'ur' : 'en')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all hover:opacity-80 border"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)',
+                color: 'var(--grove-purple)',
+                borderColor: 'color-mix(in srgb, var(--grove-purple) 15%, transparent)',
+                fontFamily: lang === 'en' ? '"Amiri", serif' : undefined,
+              }}
+              title={lang === 'en' ? 'Switch to Urdu' : 'Switch to English'}
+            >
+              <span style={{ fontFamily: lang === 'ur' ? undefined : '"Amiri", serif', fontSize: lang === 'en' ? '14px' : undefined }}>
+                {t('langToggle')}
+              </span>
+            </button>
 
             {onToggleDarkMode && (
               <button
@@ -119,7 +140,7 @@ export const Layout: React.FC<LayoutProps> = ({
             {onFontSizeChange && fontSize !== undefined && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
                 style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)' }}>
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--grove-gold)' }}>Font</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--grove-gold)' }}>FONT</span>
                 <input
                   type="range"
                   min="20"
@@ -143,7 +164,7 @@ export const Layout: React.FC<LayoutProps> = ({
       <footer className="border-t py-12 mt-20" style={{ borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)', backgroundColor: 'var(--grove-paper)' }}>
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-sm font-medium opacity-60" style={{ color: 'var(--grove-purple)' }}>
-            © 2026 Quranic Linguistic Explorer · Powered by Groq AI &amp; AlQuran Cloud
+            © 2026 {t('appName')} · Powered by Groq AI &amp; AlQuran Cloud
           </p>
         </div>
       </footer>

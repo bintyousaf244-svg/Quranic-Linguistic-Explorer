@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Search, Loader2, X, BookOpen, ChevronRight } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface RootMatch {
   surahNumber: number;
@@ -26,8 +27,6 @@ const COMMON_ROOTS = [
 function highlightRoot(text: string, root: string): string {
   if (!root || !text) return text;
   try {
-    // Build a pattern that matches any sequence of the root consonants in order,
-    // allowing Arabic diacritics and other letters in between
     const escaped = root.split('').map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const pattern = escaped.join('[\\u064B-\\u065F]*');
     const regex = new RegExp(`(${pattern})`, 'g');
@@ -38,13 +37,15 @@ function highlightRoot(text: string, root: string): string {
 }
 
 export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, preloadRoot }) => {
+  const { lang, t } = useLanguage();
+  const isUrdu = lang === 'ur';
+
   const [query, setQuery] = useState(preloadRoot ?? '');
   const [matches, setMatches] = useState<RootMatch[]>([]);
   const [count, setCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [searched, setSearched] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (preloadRoot) handleSearch(preloadRoot);
@@ -67,7 +68,7 @@ export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, pre
       if (data.error) throw new Error(data.error);
       setMatches(data.matches ?? []);
       setCount(data.count ?? 0);
-    } catch (err: any) {
+    } catch {
       setError('Failed to search. Please try again.');
     } finally {
       setIsLoading(false);
@@ -105,7 +106,9 @@ export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, pre
               <Search size={18} />
             </div>
             <div>
-              <h2 className="text-lg font-bold" style={{ color: 'var(--grove-purple)' }}>Quranic Root Search</h2>
+              <h2 className="text-lg font-bold" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+                {t('rootTitle')}
+              </h2>
               <p className="text-xs opacity-60" style={{ color: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>
                 بحث بالجذر في القرآن الكريم
               </p>
@@ -121,11 +124,10 @@ export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, pre
         <div className="p-6 border-b" style={{ backgroundColor: 'var(--grove-cream)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
           <form onSubmit={handleSubmit} className="relative mb-4">
             <input
-              ref={inputRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="اكتب الجذر الثلاثي (مثل: كتب، علم، رحم)..."
+              placeholder={t('rootPlaceholder')}
               className="w-full pl-4 pr-32 py-4 rounded-2xl text-xl focus:outline-none focus:ring-2 transition-all shadow-sm"
               style={{
                 backgroundColor: 'var(--grove-paper)',
@@ -141,17 +143,17 @@ export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, pre
               type="submit"
               disabled={isLoading || !query.trim()}
               className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50 shadow-md"
-              style={{ backgroundColor: 'var(--grove-green)' }}
+              style={{ backgroundColor: 'var(--grove-green)', fontFamily: '"Amiri", serif' }}
             >
               {isLoading ? <Loader2 className="animate-spin" size={16} /> : <Search size={16} />}
-              بحث
+              {t('rootSearch')}
             </button>
           </form>
 
-          {/* Common roots */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold uppercase tracking-widest opacity-40" style={{ color: 'var(--grove-purple)' }}>
-              Common:
+            <span className="text-[10px] font-bold uppercase tracking-widest opacity-40"
+              style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+              {t('rootCommon')}
             </span>
             {COMMON_ROOTS.map((r) => (
               <button
@@ -181,8 +183,8 @@ export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, pre
           ) : isLoading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <Loader2 className="animate-spin" size={36} style={{ color: 'var(--grove-green)' }} />
-              <p className="text-sm opacity-60 font-arabic" style={{ color: 'var(--grove-green)', fontFamily: '"Amiri", serif' }}>
-                يجري البحث في القرآن الكريم...
+              <p className="text-sm opacity-60" style={{ color: 'var(--grove-green)', fontFamily: '"Amiri", serif' }}>
+                {t('rootSearching')}
               </p>
             </div>
           ) : matches.length > 0 ? (
@@ -192,8 +194,10 @@ export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, pre
                 style={{ backgroundColor: 'color-mix(in srgb, var(--grove-green) 6%, var(--grove-paper))', borderColor: 'color-mix(in srgb, var(--grove-green) 12%, transparent)' }}>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--grove-green)' }} />
-                  <span className="text-sm font-bold" style={{ color: 'var(--grove-green)' }}>
-                    {count} occurrences across {Object.keys(groupedBySurah).length} surahs
+                  <span className="text-sm font-bold" style={{ color: 'var(--grove-green)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+                    {isUrdu
+                      ? `${count} ${t('rootOccurrences')} ${Object.keys(groupedBySurah).length} ${t('rootSurahs')}`
+                      : `${count} ${t('rootOccurrences')} ${Object.keys(groupedBySurah).length} ${t('rootSurahs')}`}
                   </span>
                 </div>
                 <span className="text-xs font-bold opacity-50 font-arabic" style={{ color: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>
@@ -207,7 +211,6 @@ export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, pre
                 return (
                   <div key={surahNum} className="border-b"
                     style={{ borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
-                    {/* Surah header */}
                     <button
                       onClick={() => handleNavigate(Number(surahNum))}
                       className="w-full px-6 py-3 flex items-center justify-between group transition-all hover:opacity-90"
@@ -222,8 +225,8 @@ export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, pre
                           <span className="font-bold text-sm block" style={{ color: 'var(--grove-purple)' }}>
                             {first.surahEnglish}
                           </span>
-                          <span className="text-[10px] opacity-50 uppercase tracking-wider" style={{ color: 'var(--grove-purple)' }}>
-                            {surahMatches.length} {surahMatches.length === 1 ? 'verse' : 'verses'} · {first.surahTranslation}
+                          <span className="text-[10px] opacity-50 uppercase tracking-wider" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+                            {surahMatches.length} {surahMatches.length === 1 ? t('rootVerse') : t('rootVerses')} · {first.surahTranslation}
                           </span>
                         </div>
                       </div>
@@ -236,7 +239,6 @@ export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, pre
                       </div>
                     </button>
 
-                    {/* Ayah matches */}
                     {surahMatches.map((m) => (
                       <div key={`${m.surahNumber}-${m.ayahNumber}`}
                         className="px-6 py-3 border-t flex items-start gap-4"
@@ -258,8 +260,8 @@ export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, pre
               })}
 
               <div className="px-6 py-6 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-30" style={{ color: 'var(--grove-purple)' }}>
-                  Click any surah header to open it · Source: AlQuran Cloud (quran-simple-clean)
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-30" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+                  {t('rootClickNote')} · Source: AlQuran Cloud
                 </p>
               </div>
             </div>
@@ -277,11 +279,11 @@ export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, pre
                 <Search size={40} />
               </div>
               <div className="text-center">
-                <p className="text-base font-bold mb-2" style={{ color: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>
-                  بحث الجذور القرآنية
+                <p className="text-base font-bold mb-2" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+                  {t('rootEmptyTitle')}
                 </p>
-                <p className="text-sm opacity-50 max-w-sm" style={{ color: 'var(--grove-purple)' }}>
-                  Enter a 3-letter Arabic root to find every verse in the Quran containing that root — grouped by surah with direct navigation.
+                <p className="text-sm opacity-50 max-w-sm" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+                  {t('rootEmptyDesc')}
                 </p>
               </div>
             </div>

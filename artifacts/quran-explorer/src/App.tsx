@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Layout } from './components/Layout';
 import { SurahList } from './components/SurahList';
 import { SurahView } from './components/SurahView';
@@ -11,7 +12,8 @@ import { getAllNotes, saveNote } from './services/notesService';
 import { Surah, Note } from './types';
 import { Loader2, BookOpen, Star } from 'lucide-react';
 
-export default function App() {
+function AppContent() {
+  const { t } = useLanguage();
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [filteredSurahs, setFilteredSurahs] = useState<Surah[]>([]);
   const [selectedSurah, setSelectedSurah] = useState<Surah | null>(null);
@@ -109,7 +111,7 @@ export default function App() {
         <div className="flex flex-col items-center justify-center py-32 gap-4">
           <Loader2 className="animate-spin" size={40} style={{ color: 'var(--grove-green)' }} />
           <p className="font-bold uppercase tracking-widest text-xs opacity-60" style={{ color: 'var(--grove-purple)' }}>
-            Preparing the Quranic Library...
+            {t('loadingLib')}
           </p>
         </div>
       ) : selectedSurah ? (
@@ -126,14 +128,13 @@ export default function App() {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest mb-6"
               style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)' }}>
               <Star size={14} />
-              Authentic Classical I'rab Sources
+              {t('heroBadge')}
             </div>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ color: 'var(--grove-purple)' }}>
-              Explore the Divine Word
+              {t('heroTitle')}
             </h2>
             <p className="text-lg leading-relaxed font-medium opacity-70" style={{ color: 'var(--grove-purple)' }}>
-              Deep dive into the linguistic miracles of the Quran — authentic I'rab from classical
-              works (الدعاس، الدرويش، النحاس), AI morphology, and word-by-word dictionary analysis.
+              {t('heroDesc')}
             </p>
           </div>
 
@@ -144,10 +145,10 @@ export default function App() {
               </div>
               <div>
                 <h3 className="text-xl font-bold uppercase tracking-widest" style={{ color: 'var(--grove-purple)' }}>
-                  114 Surahs
+                  {t('sectionTitle')}
                 </h3>
                 <p className="text-xs opacity-50" style={{ color: 'var(--grove-purple)' }}>
-                  English · Urdu · Arabic Tafsir
+                  {t('sectionSub')}
                 </p>
               </div>
             </div>
@@ -160,5 +161,13 @@ export default function App() {
         </div>
       )}
     </Layout>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }

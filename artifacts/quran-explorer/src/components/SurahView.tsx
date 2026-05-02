@@ -3,6 +3,8 @@ import { Surah, SurahDetail, Note } from '../types';
 import { getSurahDetail } from '../services/quranService';
 import { AyahCard } from './AyahCard';
 import { Loader2, ArrowLeft, ArrowUp } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { surahUrduMeanings } from '../lib/surahUrduNames';
 
 interface SurahViewProps {
   surah: Surah;
@@ -13,6 +15,9 @@ interface SurahViewProps {
 }
 
 export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSaveNote, fontSize }) => {
+  const { lang, t } = useLanguage();
+  const isUrdu = lang === 'ur';
+
   const [detail, setDetail] = useState<SurahDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -31,16 +36,28 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
       .finally(() => setIsLoading(false));
   }, [surah.number]);
 
+  const revelationLabel = (type: string) => {
+    if (type === 'Meccan') return t('meccan');
+    if (type === 'Medinan') return t('medinan');
+    return type;
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <Loader2 className="animate-spin" size={32} style={{ color: 'var(--grove-purple)' }} />
-        <p className="font-medium opacity-60" style={{ color: 'var(--grove-purple)' }}>Loading Surah {surah.englishName}...</p>
+        <p className="font-medium opacity-60" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+          {t('loadingSurah')} {surah.englishName}...
+        </p>
       </div>
     );
   }
 
   if (!detail) return null;
+
+  const nameTranslation = isUrdu
+    ? surahUrduMeanings[surah.number] ?? surah.englishNameTranslation
+    : surah.englishNameTranslation;
 
   return (
     <div>
@@ -55,15 +72,15 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
         </button>
 
         <div className="inline-block px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-6"
-          style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)' }}>
-          Surah {surah.number} · {surah.revelationType}
+          style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)', fontFamily: isUrdu ? '"Amiri", serif' : undefined, fontSize: isUrdu ? '12px' : undefined }}>
+          {t('surahLabel')} {surah.number} · {revelationLabel(surah.revelationType)}
         </div>
 
         <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-3" style={{ color: 'var(--grove-purple)' }}>
           {surah.englishName}
         </h2>
-        <p className="text-xl mb-8 font-medium opacity-50" style={{ color: 'var(--grove-purple)' }}>
-          {surah.englishNameTranslation}
+        <p className="text-xl mb-8 font-medium opacity-50" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+          {nameTranslation}
         </p>
 
         <div className="text-6xl mb-10" style={{ fontFamily: '"Amiri", serif', color: 'var(--grove-purple)' }}>
