@@ -8,7 +8,7 @@ export interface WordInfo {
   meaning?: string;
   ar_meaning?: string;
   transliteration?: string;
-  source?: 'classical' | 'quran.com' | 'ai';
+  source?: 'classical' | 'quran.com' | 'corpus+quran.com' | 'ai';
 }
 
 interface WordPopupProps {
@@ -76,6 +76,12 @@ export const WordPopup: React.FC<WordPopupProps> = ({
               <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full self-start"
                 style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 15%, transparent)', color: 'var(--grove-teal)' }}>
                 quran.com
+              </span>
+            )}
+            {info?.source === 'corpus+quran.com' && (
+              <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full self-start"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 12%, transparent)', color: 'var(--grove-teal)' }}>
+                Corpus + quran.com
               </span>
             )}
           </div>

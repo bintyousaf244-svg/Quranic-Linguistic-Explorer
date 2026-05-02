@@ -51,9 +51,22 @@ A full-stack web application for deep linguistic analysis of the Quran, powered 
 - `src/context/LanguageProvider.tsx` — provider component
 - `src/context/useLanguage.ts` — hook for consumers
 
+## Word Tap Popup — Hybrid Morphology Lookup
+
+Tapping any Quranic word shows a popup with root, wazn, type, meaning, and transliteration.
+
+Three-tier lookup in `artifacts/api-server/src/routes/wordLookup.ts`:
+
+1. **Classical Dictionary** (instant, ~60+ words) — Lisan al-Arab / Al-Mufradat sourced entries with root, wazn, full English + Arabic meaning. Transliteration enriched from quran.com text match only.
+2. **Corpus + quran.com** (for all other words) — `corpus.quran.com/wordmorphology.jsp?location=(S:A:W:segment)` HTML-scraped for root (Arabic, from `<span class="at">`) and POS type. `api.quran.com/api/v4` word-by-word API for meaning + transliteration. Both called in parallel. Source badge shows "Corpus + quran.com".
+3. Cache: `runtimeCache` (Map, in-memory, server lifetime) keyed by `S:A:W`. Frontend also caches in localStorage with key `word_popup_v4_{surah}_{ayah}_{wordIndex}`.
+
+Word positions: frontend sends `{word, surah, ayah, wordIndex}` (0-based). Backend uses `wordIndex+1` as 1-based position for corpus.quran.com. corpus.quran.com tries segments 1→2→3 to find the one with root data.
+
 ## API Routes
 | Route | Auth | Description |
 |-------|------|-------------|
+| `POST /api/word-lookup` | None | Hybrid word morphology (classical + corpus.quran.com + quran.com) |
 | `POST /api/analysis/stream` | None | SSE streaming AI analysis |
 | `POST /api/tasreef` | None | Verb conjugation JSON |
 | `POST /api/root-search` | None | Root search |
