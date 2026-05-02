@@ -7,6 +7,7 @@ interface LayoutProps {
   onOpenDictionary?: () => void;
   onOpenConjugation?: () => void;
   onOpenRootSearch?: () => void;
+  onOpenThematicSearch?: () => void;
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
   isDarkMode?: boolean;
@@ -19,6 +20,7 @@ export const Layout: React.FC<LayoutProps> = ({
   onOpenDictionary,
   onOpenConjugation,
   onOpenRootSearch,
+  onOpenThematicSearch,
   fontSize,
   onFontSizeChange,
   isDarkMode,
@@ -90,6 +92,17 @@ export const Layout: React.FC<LayoutProps> = ({
               >
                 <span className="text-base leading-none">ج</span>
                 <span className="hidden sm:inline font-sans">Roots</span>
+              </button>
+            )}
+
+            {onOpenThematicSearch && (
+              <button
+                onClick={onOpenThematicSearch}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all hover:opacity-80"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 12%, transparent)', color: 'var(--grove-teal)' }}
+              >
+                <span className="text-base leading-none">م</span>
+                <span className="hidden sm:inline">Themes</span>
               </button>
             )}
 

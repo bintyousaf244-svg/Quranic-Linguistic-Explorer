@@ -13,6 +13,7 @@ interface RootMatch {
 interface RootSearchProps {
   onClose: () => void;
   onNavigate: (surahNumber: number) => void;
+  preloadRoot?: string;
 }
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -36,14 +37,19 @@ function highlightRoot(text: string, root: string): string {
   }
 }
 
-export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate }) => {
-  const [query, setQuery] = useState('');
+export const RootSearch: React.FC<RootSearchProps> = ({ onClose, onNavigate, preloadRoot }) => {
+  const [query, setQuery] = useState(preloadRoot ?? '');
   const [matches, setMatches] = useState<RootMatch[]>([]);
   const [count, setCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [searched, setSearched] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (preloadRoot) handleSearch(preloadRoot);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSearch = async (root?: string) => {
     const q = (root ?? query).trim();

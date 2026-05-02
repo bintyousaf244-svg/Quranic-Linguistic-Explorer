@@ -5,6 +5,7 @@ import { SurahView } from './components/SurahView';
 import { WordSearch } from './components/WordSearch';
 import { VerbConjugation } from './components/VerbConjugation';
 import { RootSearch } from './components/RootSearch';
+import { ThematicSearch } from './components/ThematicSearch';
 import { getAllSurahs } from './services/quranService';
 import { getAllNotes, saveNote } from './services/notesService';
 import { Surah, Note } from './types';
@@ -19,6 +20,8 @@ export default function App() {
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
   const [isConjugationOpen, setIsConjugationOpen] = useState(false);
   const [isRootSearchOpen, setIsRootSearchOpen] = useState(false);
+  const [isThematicOpen, setIsThematicOpen] = useState(false);
+  const [rootSearchPreload, setRootSearchPreload] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState(32);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     try { return JSON.parse(localStorage.getItem('darkMode') || 'false'); } catch { return false; }
@@ -69,6 +72,7 @@ export default function App() {
       onOpenDictionary={() => setIsDictionaryOpen(true)}
       onOpenConjugation={() => setIsConjugationOpen(true)}
       onOpenRootSearch={() => setIsRootSearchOpen(true)}
+      onOpenThematicSearch={() => setIsThematicOpen(true)}
       fontSize={fontSize}
       onFontSizeChange={setFontSize}
       isDarkMode={isDarkMode}
@@ -78,10 +82,25 @@ export default function App() {
       {isConjugationOpen && <VerbConjugation onClose={() => setIsConjugationOpen(false)} />}
       {isRootSearchOpen && (
         <RootSearch
-          onClose={() => setIsRootSearchOpen(false)}
+          onClose={() => { setIsRootSearchOpen(false); setRootSearchPreload(null); }}
           onNavigate={(num) => {
             const s = surahs.find(x => x.number === num);
             if (s) setSelectedSurah(s);
+          }}
+          preloadRoot={rootSearchPreload ?? undefined}
+        />
+      )}
+      {isThematicOpen && (
+        <ThematicSearch
+          onClose={() => setIsThematicOpen(false)}
+          onNavigate={(num) => {
+            const s = surahs.find(x => x.number === num);
+            if (s) setSelectedSurah(s);
+          }}
+          onOpenRootSearch={(root) => {
+            setIsThematicOpen(false);
+            setRootSearchPreload(root);
+            setIsRootSearchOpen(true);
           }}
         />
       )}
