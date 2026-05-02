@@ -55,7 +55,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
   const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
   const fetchWordInfo = async (word: string) => {
-    const cacheKey = `word_popup_v1_${word}`;
+    const cacheKey = `word_popup_v3_${word}`;
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) { setWordInfo(JSON.parse(cached)); return; }

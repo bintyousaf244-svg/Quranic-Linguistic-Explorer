@@ -7,6 +7,7 @@ export interface WordInfo {
   type?: string;
   meaning?: string;
   ar_meaning?: string;
+  source?: 'classical' | 'ai';
 }
 
 interface WordPopupProps {
@@ -59,10 +60,18 @@ export const WordPopup: React.FC<WordPopupProps> = ({
 
         <div className="px-4 pt-4 pb-3 flex items-start justify-between gap-2"
           style={{ borderBottom: '1px solid color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
-          <span className="text-3xl leading-tight" dir="rtl"
-            style={{ fontFamily: 'var(--font-arabic-var)', color: 'var(--grove-purple)' }}>
-            {word}
-          </span>
+          <div className="flex flex-col gap-1 min-w-0">
+            <span className="text-3xl leading-tight" dir="rtl"
+              style={{ fontFamily: 'var(--font-arabic-var)', color: 'var(--grove-purple)' }}>
+              {word}
+            </span>
+            {info?.source === 'classical' && (
+              <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full self-start"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-green) 15%, transparent)', color: 'var(--grove-green)' }}>
+                Classical Source
+              </span>
+            )}
+          </div>
           <button onClick={onClose}
             className="p-1 rounded-full opacity-40 hover:opacity-80 transition-opacity mt-1.5 shrink-0"
             style={{ color: 'var(--grove-purple)' }}>
