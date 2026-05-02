@@ -169,3 +169,12 @@
 .conjugation-table strong { color: var(--grove-gold); font-weight: 700; }
 .conjugation-table ul { padding-right: 1.5rem; padding-left: 0; margin-bottom: 0.75rem; }
 .conjugation-table li { margin-bottom: 0.3rem; line-height: 2; }
+
+/* Root search highlight */
+.root-search-highlight mark {
+  background-color: color-mix(in srgb, var(--grove-green) 22%, transparent);
+  color: var(--grove-green);
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 0 2px;
+}

@@ -4,6 +4,7 @@ import { SurahList } from './components/SurahList';
 import { SurahView } from './components/SurahView';
 import { WordSearch } from './components/WordSearch';
 import { VerbConjugation } from './components/VerbConjugation';
+import { RootSearch } from './components/RootSearch';
 import { getAllSurahs } from './services/quranService';
 import { getAllNotes, saveNote } from './services/notesService';
 import { Surah, Note } from './types';
@@ -17,6 +18,7 @@ export default function App() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
   const [isConjugationOpen, setIsConjugationOpen] = useState(false);
+  const [isRootSearchOpen, setIsRootSearchOpen] = useState(false);
   const [fontSize, setFontSize] = useState(32);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     try { return JSON.parse(localStorage.getItem('darkMode') || 'false'); } catch { return false; }
@@ -66,6 +68,7 @@ export default function App() {
       onSearch={handleSearch}
       onOpenDictionary={() => setIsDictionaryOpen(true)}
       onOpenConjugation={() => setIsConjugationOpen(true)}
+      onOpenRootSearch={() => setIsRootSearchOpen(true)}
       fontSize={fontSize}
       onFontSizeChange={setFontSize}
       isDarkMode={isDarkMode}
@@ -73,6 +76,15 @@ export default function App() {
     >
       {isDictionaryOpen && <WordSearch onClose={() => setIsDictionaryOpen(false)} />}
       {isConjugationOpen && <VerbConjugation onClose={() => setIsConjugationOpen(false)} />}
+      {isRootSearchOpen && (
+        <RootSearch
+          onClose={() => setIsRootSearchOpen(false)}
+          onNavigate={(num) => {
+            const s = surahs.find(x => x.number === num);
+            if (s) setSelectedSurah(s);
+          }}
+        />
+      )}
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-32 gap-4">

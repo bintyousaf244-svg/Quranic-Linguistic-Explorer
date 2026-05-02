@@ -6,6 +6,7 @@ interface LayoutProps {
   onSearch?: (query: string) => void;
   onOpenDictionary?: () => void;
   onOpenConjugation?: () => void;
+  onOpenRootSearch?: () => void;
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
   isDarkMode?: boolean;
@@ -17,6 +18,7 @@ export const Layout: React.FC<LayoutProps> = ({
   onSearch,
   onOpenDictionary,
   onOpenConjugation,
+  onOpenRootSearch,
   fontSize,
   onFontSizeChange,
   isDarkMode,
@@ -77,6 +79,17 @@ export const Layout: React.FC<LayoutProps> = ({
               >
                 <span className="text-base leading-none">ص</span>
                 <span className="hidden sm:inline font-sans">Tasreef</span>
+              </button>
+            )}
+
+            {onOpenRootSearch && (
+              <button
+                onClick={onOpenRootSearch}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all hover:opacity-80"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-green) 12%, transparent)', color: 'var(--grove-green)', fontFamily: '"Amiri", serif' }}
+              >
+                <span className="text-base leading-none">ج</span>
+                <span className="hidden sm:inline font-sans">Roots</span>
               </button>
             )}
 
