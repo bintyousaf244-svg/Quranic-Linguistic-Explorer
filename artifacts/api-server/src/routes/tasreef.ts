@@ -2,7 +2,20 @@ import { Router } from 'express';
 import Groq from 'groq-sdk';
 
 const router = Router();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+const GROQ_KEYS = [
+  process.env.GROQ_API_KEY,
+  process.env.GROQ_API_KEY_2,
+  process.env.GROQ_API_KEY_3,
+].filter(Boolean) as string[];
+
+let keyIndex = 0;
+function getGroqClient(): Groq {
+  return new Groq({ apiKey: GROQ_KEYS[keyIndex % GROQ_KEYS.length] });
+}
+function rotateKey(): void {
+  keyIndex = (keyIndex + 1) % GROQ_KEYS.length;
+}
 
 const MODEL = 'llama-3.1-8b-instant';
 
@@ -82,6 +95,7 @@ Replace every "?" with the correct Arabic form (full tashkeel) or its romanized 
   }
 }`;
 
+  const groq = getGroqClient();
   try {
     const completion = await groq.chat.completions.create({
       model: MODEL,

@@ -1,6 +1,9 @@
 import React from 'react';
-import { Book, Search, Moon, Sun } from 'lucide-react';
+import { Book, Search, Moon, Sun, LogIn, LogOut, User } from 'lucide-react';
 import { useLanguage } from '../context/useLanguage';
+import { useUser, useClerk } from '@clerk/react';
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,16 +21,14 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({
   children,
   onSearch,
-  onOpenDictionary,
-  onOpenConjugation,
-  onOpenRootSearch,
-  onOpenThematicSearch,
   fontSize,
   onFontSizeChange,
   isDarkMode,
-  onToggleDarkMode
+  onToggleDarkMode,
 }) => {
   const { lang, setLang, t } = useLanguage();
+  const { user, isSignedIn, isLoaded } = useUser();
+  const { openSignIn, signOut } = useClerk();
   const isUrdu = lang === 'ur';
 
   return (
@@ -59,7 +60,7 @@ export const Layout: React.FC<LayoutProps> = ({
                     backgroundColor: 'var(--grove-cream)',
                     color: 'var(--grove-purple)',
                     border: 'none',
-                    boxShadow: '0 0 0 2px color-mix(in srgb, var(--grove-purple) 10%, transparent)'
+                    boxShadow: '0 0 0 2px color-mix(in srgb, var(--grove-purple) 10%, transparent)',
                   }}
                   onChange={(e) => onSearch(e.target.value)}
                 />
@@ -108,6 +109,40 @@ export const Layout: React.FC<LayoutProps> = ({
                 />
                 <span className="text-xs font-mono w-6" style={{ color: 'var(--grove-gold)' }}>{fontSize}</span>
               </div>
+            )}
+
+            {/* Auth button */}
+            {isLoaded && (
+              isSignedIn ? (
+                <div className="flex items-center gap-2">
+                  {user?.imageUrl ? (
+                    <img src={user.imageUrl} alt="" className="w-7 h-7 rounded-full object-cover ring-2 ring-offset-1"
+                      style={{ ringColor: 'var(--grove-purple)' }} />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                      style={{ backgroundColor: 'var(--grove-purple)' }}>
+                      <User size={14} />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => signOut({ redirectUrl: `${basePath}/` })}
+                    className="p-2 rounded-full transition-all hover:opacity-80 hidden sm:flex"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)', color: 'var(--grove-purple)' }}
+                    title="Sign out"
+                  >
+                    <LogOut size={16} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => openSignIn({ redirectUrl: `${basePath}/` })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all hover:opacity-90 text-white"
+                  style={{ backgroundColor: 'var(--grove-purple)' }}
+                >
+                  <LogIn size={14} />
+                  <span className="hidden sm:inline">Sign in</span>
+                </button>
+              )
             )}
           </div>
         </div>

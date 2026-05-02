@@ -2,7 +2,20 @@ import { Router } from 'express';
 import Groq from 'groq-sdk';
 
 const router = Router();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+const GROQ_KEYS = [
+  process.env.GROQ_API_KEY,
+  process.env.GROQ_API_KEY_2,
+  process.env.GROQ_API_KEY_3,
+].filter(Boolean) as string[];
+
+let currentKeyIndex = 0;
+function getGroqClient(): Groq {
+  return new Groq({ apiKey: GROQ_KEYS[currentKeyIndex % GROQ_KEYS.length] });
+}
+function rotateKey(): void {
+  currentKeyIndex = (currentKeyIndex + 1) % GROQ_KEYS.length;
+}
 
 const MODEL = 'llama-3.1-8b-instant';
 
@@ -178,6 +191,7 @@ router.post('/analysis/stream', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
+  const groq = getGroqClient();
   try {
     const stream = await groq.chat.completions.create({
       model: MODEL,
@@ -201,7 +215,12 @@ router.post('/analysis/stream', async (req, res) => {
     res.end();
   } catch (err: any) {
     req.log.error({ err }, 'Groq streaming error');
-    res.write(`data: ${JSON.stringify({ error: 'Analysis failed. Please try again.' })}\n\n`);
+    const is429 = err?.status === 429;
+    if (is429 && GROQ_KEYS.length > 1) rotateKey();
+    const msg = is429
+      ? 'Daily token limit reached. Please try again in a few hours.'
+      : 'Analysis failed. Please try again.';
+    res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
     res.end();
   }
 });
