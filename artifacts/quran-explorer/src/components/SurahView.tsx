@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Surah, SurahDetail, Note } from '../types';
 import { getSurahDetail } from '../services/quranService';
 import { fetchSurahTafseer, TafseerEdition, TAFSEER_META } from '../services/tafseerService';
+import { ReciterId, RECITERS, DEFAULT_RECITER, stopAyahAudio } from '../services/audioService';
 import { AyahCard } from './AyahCard';
-import { Loader2, ArrowLeft, ArrowUp, BookMarked } from 'lucide-react';
+import { Loader2, ArrowLeft, ArrowUp, BookMarked, Headphones } from 'lucide-react';
 import { useLanguage } from '../context/useLanguage';
 import { surahUrduMeanings } from '../lib/surahUrduNames';
 
@@ -29,6 +30,14 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
   const [isTafseerLoading, setIsTafseerLoading] = useState(false);
   const [tafseerError, setTafseerError] = useState<string | null>(null);
 
+  const [reciterId, setReciterId] = useState<ReciterId | null>(null);
+  const [playingAyah, setPlayingAyah] = useState<number | null>(null);
+
+  // Stop audio when navigating away
+  const reciterIdRef = useRef(reciterId);
+  reciterIdRef.current = reciterId;
+  useEffect(() => () => stopAyahAudio(), []);
+
   useEffect(() => {
     const handleScroll = () => setShowScrollTop(window.scrollY > 500);
     window.addEventListener('scroll', handleScroll);
@@ -43,6 +52,8 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
       .finally(() => setIsLoading(false));
     setSelectedTafseer(null);
     setTafseerMap(new Map());
+    stopAyahAudio();
+    setPlayingAyah(null);
   }, [surah.number]);
 
   // Scroll to a specific ayah once content loads
@@ -101,6 +112,14 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
     { value: 'ur.maarifulquran', label: t('tafseerMaarif') },
   ];
 
+  const reciterOptions: { value: ReciterId | null; label: string }[] = [
+    { value: null, label: t('reciterOff') },
+    ...Object.entries(RECITERS).map(([id, meta]) => ({
+      value: id as ReciterId,
+      label: isUrdu ? meta.nameAr : meta.nameEn,
+    })),
+  ];
+
   return (
     <div>
       <div className="mb-8 text-center relative rounded-[2rem] p-10 md:p-14 border"
@@ -141,7 +160,7 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
       </div>
 
       {/* Tafseer selector bar */}
-      <div className="mb-8 rounded-2xl border p-4 flex flex-wrap items-center gap-3"
+      <div className="mb-4 rounded-2xl border p-4 flex flex-wrap items-center gap-3"
         style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
         <div className="flex items-center gap-2 shrink-0">
           <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 12%, transparent)' }}>
@@ -179,14 +198,53 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
             {t('tafseerLoading')}
           </div>
         )}
-        {tafseerError && (
-          <span className="text-[10px] text-red-500 font-medium">{tafseerError}</span>
-        )}
+        {tafseerError && <span className="text-[10px] text-red-500 font-medium">{tafseerError}</span>}
         {selectedTafseer && !isTafseerLoading && tafseerMap.size > 0 && (
-          <span className="text-[10px] opacity-40 italic" style={{ color: 'var(--grove-purple)', direction: isUrdu && selectedTafseer === 'ur.maarifulquran' ? 'rtl' : 'ltr', fontFamily: '"Amiri", serif' }}>
-            {isUrdu
-              ? TAFSEER_META[selectedTafseer].sourceUr
-              : TAFSEER_META[selectedTafseer].sourceEn}
+          <span className="text-[10px] opacity-40 italic" style={{ color: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>
+            {isUrdu ? TAFSEER_META[selectedTafseer].sourceUr : TAFSEER_META[selectedTafseer].sourceEn}
+          </span>
+        )}
+      </div>
+
+      {/* Reciter selector bar */}
+      <div className="mb-8 rounded-2xl border p-4 flex flex-wrap items-center gap-3"
+        style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-green) 12%, transparent)' }}>
+            <Headphones size={15} style={{ color: 'var(--grove-green)' }} />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: 'var(--grove-green)', fontFamily: isUrdu ? '"Amiri", serif' : undefined, fontSize: isUrdu ? '13px' : undefined }}>
+            {t('reciterLabel')}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2 flex-1">
+          {reciterOptions.map(opt => (
+            <button
+              key={opt.value ?? 'off'}
+              onClick={() => {
+                if (reciterId !== opt.value) {
+                  stopAyahAudio();
+                  setPlayingAyah(null);
+                }
+                setReciterId(opt.value);
+              }}
+              className="px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all"
+              style={{
+                backgroundColor: reciterId === opt.value
+                  ? 'var(--grove-green)'
+                  : 'color-mix(in srgb, var(--grove-green) 10%, transparent)',
+                color: reciterId === opt.value ? 'white' : 'var(--grove-green)',
+                fontFamily: isUrdu ? '"Amiri", serif' : undefined,
+                fontSize: isUrdu ? '13px' : undefined,
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {reciterId && (
+          <span className="text-[10px] opacity-40 italic" style={{ color: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>
+            {isUrdu ? 'EveryAyah.com سے آڈیو' : 'Audio via EveryAyah.com'}
           </span>
         )}
       </div>
@@ -204,6 +262,9 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
               highlighted={scrollToAyah === ayah.numberInSurah}
               tafseerText={tafseerMap.get(ayah.numberInSurah)}
               tafseerEdition={selectedTafseer ?? undefined}
+              reciterId={reciterId ?? undefined}
+              isPlaying={playingAyah === ayah.numberInSurah}
+              onPlayingChange={(playing) => setPlayingAyah(playing ? ayah.numberInSurah : null)}
             />
           </div>
         ))}

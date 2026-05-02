@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Ayah, Note } from '../types';
-import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked } from 'lucide-react';
+import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked, Play, Pause, Volume2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { streamAnalysis, fetchAuthenticGrammar } from '../services/analysisService';
 import { AnalysisCache } from '../services/cacheService';
 import { useLanguage } from '../context/useLanguage';
 import { TafseerEdition, TAFSEER_META } from '../services/tafseerService';
+import { ReciterId, getAyahAudioUrl, playAyahAudio, stopAyahAudio } from '../services/audioService';
 
 interface AyahCardProps {
   ayah: Ayah;
@@ -17,9 +18,12 @@ interface AyahCardProps {
   highlighted?: boolean;
   tafseerText?: string;
   tafseerEdition?: TafseerEdition;
+  reciterId?: ReciterId;
+  isPlaying?: boolean;
+  onPlayingChange?: (playing: boolean) => void;
 }
 
-export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber, note, onSaveNote, fontSize, highlighted, tafseerText, tafseerEdition }) => {
+export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber, note, onSaveNote, fontSize, highlighted, tafseerText, tafseerEdition, reciterId, isPlaying, onPlayingChange }) => {
   const { lang, t } = useLanguage();
 
   const [activeTabs, setActiveTabs] = useState<string[]>([]);
@@ -34,6 +38,17 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
   const [copiedType, setCopiedType] = useState<string | null>(null);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const onPlayingChangeRef = useRef(onPlayingChange);
+  onPlayingChangeRef.current = onPlayingChange;
+
+  // Stop audio if reciter changes externally while this ayah is playing
+  useEffect(() => {
+    if (!reciterId && isPlaying) {
+      stopAyahAudio();
+      onPlayingChangeRef.current?.(false);
+    }
+  }, [reciterId, isPlaying]);
 
   useEffect(() => {
     setActiveTranslation(lang === 'ur' ? 'ur' : 'en');
@@ -218,9 +233,44 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-mono text-xs font-bold shadow-inner"
-              style={{ backgroundColor: 'var(--grove-cream)', color: 'var(--grove-green)' }}>
-              {ayah.numberInSurah}
+              style={{ backgroundColor: isPlaying ? 'var(--grove-green)' : 'var(--grove-cream)', color: isPlaying ? 'white' : 'var(--grove-green)', transition: 'background-color 0.3s, color 0.3s' }}>
+              {isPlaying
+                ? <Volume2 size={18} className="animate-pulse" />
+                : ayah.numberInSurah}
             </div>
+            {reciterId && (
+              <button
+                onClick={() => {
+                  if (isPlaying) {
+                    stopAyahAudio();
+                    onPlayingChange?.(false);
+                  } else {
+                    setAudioLoading(true);
+                    const url = getAyahAudioUrl(surahNumber, ayah.numberInSurah, reciterId);
+                    playAyahAudio(url, () => {
+                      setAudioLoading(false);
+                      onPlayingChange?.(false);
+                    });
+                    onPlayingChange?.(true);
+                    setTimeout(() => setAudioLoading(false), 2000);
+                  }
+                }}
+                className="p-2.5 rounded-xl transition-all hover:opacity-80 active:scale-95"
+                title={isPlaying ? t('audioPause') : t('audioPlay')}
+                style={{
+                  backgroundColor: isPlaying
+                    ? 'var(--grove-green)'
+                    : 'color-mix(in srgb, var(--grove-green) 12%, transparent)',
+                  color: isPlaying ? 'white' : 'var(--grove-green)',
+                }}
+              >
+                {audioLoading && !isPlaying
+                  ? <Loader2 size={16} className="animate-spin" />
+                  : isPlaying
+                    ? <Pause size={16} />
+                    : <Play size={16} />}
+              </button>
+            )}
             <button onClick={() => handleCopy(ayah.text, 'ayah')} className="p-2.5 rounded-xl transition-all hover:opacity-70"
               style={{ color: 'var(--grove-purple)' }}>
               {copiedType === 'ayah' ? <Check size={18} style={{ color: 'var(--grove-green)' }} /> : <Copy size={18} />}

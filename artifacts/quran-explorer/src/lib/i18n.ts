@@ -34,6 +34,12 @@ export const strings = {
     tafseerLoading: 'Loading tafseer...',
     tafseerLabel: 'Tafseer',
 
+    reciterLabel: 'Reciter',
+    reciterOff: 'Off',
+    audioPlay: 'Play',
+    audioPause: 'Pause',
+    audioLoading: 'Loading audio...',
+
     transEn: 'English',
     transUr: 'Urdu',
     transAr: 'Arabic (Tafsir)',
@@ -113,6 +119,12 @@ export const strings = {
     tafseerMaarif: 'معارف القرآن',
     tafseerLoading: 'تفسیر لا رہے ہیں...',
     tafseerLabel: 'تفسیر',
+
+    reciterLabel: 'قاری',
+    reciterOff: 'بند',
+    audioPlay: 'چلائیں',
+    audioPause: 'روکیں',
+    audioLoading: 'آڈیو لوڈ ہو رہا ہے...',
 
     transEn: 'انگریزی',
     transUr: 'اردو',
