@@ -1,4 +1,4 @@
-const CACHE_PREFIX = 'quran_analysis_v3_';
+const CACHE_PREFIX = 'quran_analysis_v4_';
 
 function purgeOldCache() {
   try {
