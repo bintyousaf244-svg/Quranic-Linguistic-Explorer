@@ -99,7 +99,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, note, onSav
     </button>
   );
 
-  const Panel = ({ id, title, content, color, note: noteText }: { id: string; title: string; content: string; color: string; note?: string }) => (
+  const Panel = ({ id, title, content, color, note: noteText, rtl }: { id: string; title: string; content: string; color: string; note?: string; rtl?: boolean }) => (
     <div className="p-8 md:p-10 border-b" style={{ backgroundColor: `color-mix(in srgb, ${color} 6%, transparent)`, borderColor: `color-mix(in srgb, var(--grove-purple) 5%, transparent)` }}>
       <div className="flex items-center justify-between mb-6">
         <h4 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color }}>{title}</h4>
@@ -121,7 +121,15 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, note, onSav
         </div>
       ) : (
         <>
-          <div className="markdown-body prose prose-sm max-w-none" style={{ fontSize: `${analysisFontSize}px` }}>
+          <div
+            className={`markdown-body prose prose-sm max-w-none${rtl ? ' markdown-rtl' : ''}`}
+            style={{
+              fontSize: `${analysisFontSize}px`,
+              direction: rtl ? 'rtl' : 'ltr',
+              textAlign: rtl ? 'right' : 'left',
+              fontFamily: rtl ? '"Amiri", serif' : undefined,
+            }}
+          >
             <ReactMarkdown>{content}</ReactMarkdown>
           </div>
           {noteText && (
@@ -204,7 +212,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, note, onSav
 
       <div className="flex flex-col border-t" style={{ borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
         {activeTabs.includes('grammar') && (
-          <Panel id="grammar" title="Arabic Grammar Analysis (I'rab)" content={grammarAnalysis} color="var(--grove-purple)"
+          <Panel id="grammar" title="Arabic Grammar Analysis (I'rab)" content={grammarAnalysis} color="var(--grove-purple)" rtl
             note="Analysis aligned with classical works including I'rab al-Quran by Al-Darwish and Al-Nahhas." />
         )}
         {activeTabs.includes('dictionary') && (
@@ -212,7 +220,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, note, onSav
             note="Definitions derived from Lisan al-Arab, Mu'jam Maqayis al-Lugha, and Lane's Lexicon." />
         )}
         {activeTabs.includes('morphology') && (
-          <Panel id="morphology" title="Morphological Analysis (Sarf)" content={morphologyAnalysis} color="var(--grove-gold)"
+          <Panel id="morphology" title="Morphological Analysis (Sarf)" content={morphologyAnalysis} color="var(--grove-gold)" rtl
             note="Morphological data follows classical Sarf methodology of Ibn Jinni and Al-Hamalawy." />
         )}
         {activeTabs.includes('notes') && (
