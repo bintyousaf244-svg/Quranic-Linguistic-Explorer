@@ -39,6 +39,9 @@ export const strings = {
     audioPlay: 'Play',
     audioPause: 'Pause',
     audioLoading: 'Loading audio...',
+    autoPlay: 'Auto-play',
+    autoPlayOn: 'Auto-play On',
+    autoPlayOff: 'Auto-play Off',
 
     transEn: 'English',
     transUr: 'Urdu',
@@ -125,6 +128,9 @@ export const strings = {
     audioPlay: 'چلائیں',
     audioPause: 'روکیں',
     audioLoading: 'آڈیو لوڈ ہو رہا ہے...',
+    autoPlay: 'خودکار چلاؤ',
+    autoPlayOn: 'خودکار: چالو',
+    autoPlayOff: 'خودکار: بند',
 
     transEn: 'انگریزی',
     transUr: 'اردو',

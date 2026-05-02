@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Ayah, Note } from '../types';
 import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked, Play, Pause, Volume2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -6,7 +6,6 @@ import { streamAnalysis, fetchAuthenticGrammar } from '../services/analysisServi
 import { AnalysisCache } from '../services/cacheService';
 import { useLanguage } from '../context/useLanguage';
 import { TafseerEdition, TAFSEER_META } from '../services/tafseerService';
-import { ReciterId, getAyahAudioUrl, playAyahAudio, stopAyahAudio } from '../services/audioService';
 
 interface AyahCardProps {
   ayah: Ayah;
@@ -18,12 +17,16 @@ interface AyahCardProps {
   highlighted?: boolean;
   tafseerText?: string;
   tafseerEdition?: TafseerEdition;
-  reciterId?: ReciterId;
+  hasReciter?: boolean;
   isPlaying?: boolean;
-  onPlayingChange?: (playing: boolean) => void;
+  onPlay?: () => void;
+  onPause?: () => void;
 }
 
-export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber, note, onSaveNote, fontSize, highlighted, tafseerText, tafseerEdition, reciterId, isPlaying, onPlayingChange }) => {
+export const AyahCard: React.FC<AyahCardProps> = ({
+  ayah, surahName, surahNumber, note, onSaveNote, fontSize, highlighted,
+  tafseerText, tafseerEdition, hasReciter, isPlaying, onPlay, onPause,
+}) => {
   const { lang, t } = useLanguage();
 
   const [activeTabs, setActiveTabs] = useState<string[]>([]);
@@ -38,17 +41,6 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
   const [copiedType, setCopiedType] = useState<string | null>(null);
-  const [audioLoading, setAudioLoading] = useState(false);
-  const onPlayingChangeRef = useRef(onPlayingChange);
-  onPlayingChangeRef.current = onPlayingChange;
-
-  // Stop audio if reciter changes externally while this ayah is playing
-  useEffect(() => {
-    if (!reciterId && isPlaying) {
-      stopAyahAudio();
-      onPlayingChangeRef.current?.(false);
-    }
-  }, [reciterId, isPlaying]);
 
   useEffect(() => {
     setActiveTranslation(lang === 'ur' ? 'ur' : 'en');
@@ -134,14 +126,12 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
   const analysisFontSize = Math.max(15, fontSize * 0.55);
   const isUrdu = lang === 'ur';
 
-  const TabBtn = ({ id, label, icon: Icon, color }: { id: string; label: string; icon: any; color: string }) => (
+  const TabBtn = ({ id, label, icon: Icon, color }: { id: string; label: string; icon: React.ElementType; color: string }) => (
     <button
-      onClick={() => id === 'notes' ? toggleTab('notes') : handleFetchAnalysis(id as any)}
+      onClick={() => id === 'notes' ? toggleTab('notes') : handleFetchAnalysis(id as 'grammar' | 'morphology' | 'dictionary')}
       className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all"
       style={{
-        backgroundColor: activeTabs.includes(id)
-          ? color
-          : `color-mix(in srgb, ${color} 12%, transparent)`,
+        backgroundColor: activeTabs.includes(id) ? color : `color-mix(in srgb, ${color} 12%, transparent)`,
         color: activeTabs.includes(id) ? 'white' : color,
         fontFamily: isUrdu ? '"Amiri", serif' : undefined,
         fontSize: isUrdu ? '13px' : undefined,
@@ -153,7 +143,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
   );
 
   const Panel = ({ id, title, content, color, note: noteText, rtl }: {
-    id: string; title: string; content: string; color: string; note?: string; rtl?: boolean
+    id: string; title: string; content: string; color: string; note?: string; rtl?: boolean;
   }) => {
     const isGrammar = id === 'grammar';
     const footerNote = isGrammar
@@ -194,15 +184,8 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
           </div>
         ) : (
           <>
-            <div
-              className={`markdown-body prose prose-sm max-w-none${rtl ? ' markdown-rtl' : ''}`}
-              style={{
-                fontSize: `${analysisFontSize}px`,
-                direction: rtl ? 'rtl' : 'ltr',
-                textAlign: rtl ? 'right' : 'left',
-                fontFamily: rtl ? '"Amiri", serif' : undefined,
-              }}
-            >
+            <div className={`markdown-body prose prose-sm max-w-none${rtl ? ' markdown-rtl' : ''}`}
+              style={{ fontSize: `${analysisFontSize}px`, direction: rtl ? 'rtl' : 'ltr', textAlign: rtl ? 'right' : 'left', fontFamily: rtl ? '"Amiri", serif' : undefined }}>
               <ReactMarkdown>{content}</ReactMarkdown>
             </div>
             {footerNote && (
@@ -222,39 +205,35 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
     <div className="rounded-[2rem] overflow-hidden mb-8 transition-all border"
       style={{
         backgroundColor: 'var(--grove-paper)',
-        borderColor: highlighted
-          ? 'var(--grove-gold)'
-          : 'color-mix(in srgb, var(--grove-purple) 6%, transparent)',
-        boxShadow: highlighted
-          ? '0 0 0 3px color-mix(in srgb, var(--grove-gold) 25%, transparent)'
-          : undefined,
+        borderColor: isPlaying
+          ? 'var(--grove-green)'
+          : highlighted
+            ? 'var(--grove-gold)'
+            : 'color-mix(in srgb, var(--grove-purple) 6%, transparent)',
+        boxShadow: isPlaying
+          ? '0 0 0 3px color-mix(in srgb, var(--grove-green) 20%, transparent)'
+          : highlighted
+            ? '0 0 0 3px color-mix(in srgb, var(--grove-gold) 25%, transparent)'
+            : undefined,
+        transition: 'border-color 0.3s, box-shadow 0.3s',
       }}>
       <div className="p-8 md:p-10">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
+            {/* Ayah number badge — becomes a speaker icon while playing */}
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-mono text-xs font-bold shadow-inner"
-              style={{ backgroundColor: isPlaying ? 'var(--grove-green)' : 'var(--grove-cream)', color: isPlaying ? 'white' : 'var(--grove-green)', transition: 'background-color 0.3s, color 0.3s' }}>
-              {isPlaying
-                ? <Volume2 size={18} className="animate-pulse" />
-                : ayah.numberInSurah}
+              style={{
+                backgroundColor: isPlaying ? 'var(--grove-green)' : 'var(--grove-cream)',
+                color: isPlaying ? 'white' : 'var(--grove-green)',
+                transition: 'background-color 0.3s, color 0.3s',
+              }}>
+              {isPlaying ? <Volume2 size={18} className="animate-pulse" /> : ayah.numberInSurah}
             </div>
-            {reciterId && (
+
+            {/* Play / Pause button — only visible when a reciter is selected */}
+            {hasReciter && (
               <button
-                onClick={() => {
-                  if (isPlaying) {
-                    stopAyahAudio();
-                    onPlayingChange?.(false);
-                  } else {
-                    setAudioLoading(true);
-                    const url = getAyahAudioUrl(surahNumber, ayah.numberInSurah, reciterId);
-                    playAyahAudio(url, () => {
-                      setAudioLoading(false);
-                      onPlayingChange?.(false);
-                    });
-                    onPlayingChange?.(true);
-                    setTimeout(() => setAudioLoading(false), 2000);
-                  }
-                }}
+                onClick={isPlaying ? onPause : onPlay}
                 className="p-2.5 rounded-xl transition-all hover:opacity-80 active:scale-95"
                 title={isPlaying ? t('audioPause') : t('audioPlay')}
                 style={{
@@ -264,18 +243,16 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
                   color: isPlaying ? 'white' : 'var(--grove-green)',
                 }}
               >
-                {audioLoading && !isPlaying
-                  ? <Loader2 size={16} className="animate-spin" />
-                  : isPlaying
-                    ? <Pause size={16} />
-                    : <Play size={16} />}
+                {isPlaying ? <Pause size={16} /> : <Play size={16} />}
               </button>
             )}
+
             <button onClick={() => handleCopy(ayah.text, 'ayah')} className="p-2.5 rounded-xl transition-all hover:opacity-70"
               style={{ color: 'var(--grove-purple)' }}>
               {copiedType === 'ayah' ? <Check size={18} style={{ color: 'var(--grove-green)' }} /> : <Copy size={18} />}
             </button>
           </div>
+
           <div className="flex items-center gap-2 flex-wrap justify-end">
             {tafseerText && (
               <TabBtn id="tafseer" label={t('tabTafseer')} icon={BookMarked} color="var(--grove-teal)" />
@@ -358,8 +335,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
                   </button>
                 </div>
               </div>
-              <div
-                className="leading-loose"
+              <div className="leading-loose"
                 style={{
                   fontSize: isRtl ? `${Math.max(18, analysisFontSize * 1.1)}px` : `${analysisFontSize}px`,
                   direction: isRtl ? 'rtl' : 'ltr',
@@ -368,8 +344,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
                   color: 'var(--grove-purple)',
                   opacity: 0.85,
                   lineHeight: isRtl ? 2.4 : 1.8,
-                }}
-              >
+                }}>
                 {tafseerText}
               </div>
               <div className="mt-6 pt-4 border-t text-[10px] italic opacity-35 flex items-center gap-1.5"
