@@ -54,8 +54,8 @@ export const AyahCard: React.FC<AyahCardProps> = ({
 
   const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
-  const fetchWordInfo = async (word: string) => {
-    const cacheKey = `word_popup_v3_${word}`;
+  const fetchWordInfo = async (word: string, wordIndex: number) => {
+    const cacheKey = `word_popup_v4_${surahNumber}_${ayah.numberInSurah}_${wordIndex}`;
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) { setWordInfo(JSON.parse(cached)); return; }
@@ -66,7 +66,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
       const res = await fetch(`${BASE}/api/word-lookup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word }),
+        body: JSON.stringify({ word, surah: surahNumber, ayah: ayah.numberInSurah, wordIndex }),
       });
       if (!res.ok) throw new Error('Failed');
       const data: WordInfo = await res.json();
@@ -79,7 +79,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
     }
   };
 
-  const handleWordClick = (raw: string, e: React.MouseEvent) => {
+  const handleWordClick = (raw: string, wordIndex: number, e: React.MouseEvent) => {
     e.stopPropagation();
     const word = raw.replace(/[﴿﴾۝۞۩\u0600-\u0605\u061C\u06DD]/g, '').trim();
     if (!word) return;
@@ -87,7 +87,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
     setActiveWord(word);
     setWordInfo(null);
     setWordPopupPos({ x: rect.left + rect.width / 2, y: rect.top });
-    fetchWordInfo(word);
+    fetchWordInfo(word, wordIndex);
   };
 
   useEffect(() => {
@@ -328,7 +328,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
             {ayah.text.split(' ').map((word, i) => (
               <span
                 key={i}
-                onClick={(e) => handleWordClick(word, e)}
+                onClick={(e) => handleWordClick(word, i, e)}
                 className="inline-block cursor-pointer rounded-md px-0.5 mx-[1px] transition-colors duration-150"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--grove-purple) 8%, transparent)')}

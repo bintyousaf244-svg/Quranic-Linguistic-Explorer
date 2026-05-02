@@ -7,7 +7,8 @@ export interface WordInfo {
   type?: string;
   meaning?: string;
   ar_meaning?: string;
-  source?: 'classical' | 'ai';
+  transliteration?: string;
+  source?: 'classical' | 'quran.com' | 'ai';
 }
 
 interface WordPopupProps {
@@ -71,6 +72,12 @@ export const WordPopup: React.FC<WordPopupProps> = ({
                 Classical Source
               </span>
             )}
+            {info?.source === 'quran.com' && (
+              <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full self-start"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 15%, transparent)', color: 'var(--grove-teal)' }}>
+                quran.com
+              </span>
+            )}
           </div>
           <button onClick={onClose}
             className="p-1 rounded-full opacity-40 hover:opacity-80 transition-opacity mt-1.5 shrink-0"
@@ -85,8 +92,15 @@ export const WordPopup: React.FC<WordPopupProps> = ({
               <Loader2 className="animate-spin" size={18} style={{ color: 'var(--grove-purple)' }} />
               <span className="text-xs opacity-50" style={{ color: 'var(--grove-purple)' }}>Looking up…</span>
             </div>
-          ) : info && (info.root || info.meaning) ? (
+          ) : info && (info.root || info.meaning || info.transliteration) ? (
             <div className="space-y-2">
+              {info.transliteration && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold uppercase tracking-wider opacity-40 w-10 shrink-0"
+                    style={{ color: 'var(--grove-purple)' }}>Latin</span>
+                  <span className="text-sm italic opacity-60" style={{ color: 'var(--grove-purple)' }}>{info.transliteration}</span>
+                </div>
+              )}
               {info.root && (
                 <div className="flex items-center gap-2">
                   <span className="text-[9px] font-bold uppercase tracking-wider opacity-40 w-10 shrink-0"
