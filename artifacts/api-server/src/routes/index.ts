@@ -6,6 +6,7 @@ import rootSearchRouter from "./rootSearch";
 import thematicSearchRouter from "./thematicSearch";
 import tasreefRouter from "./tasreef";
 import notesRouter from "./notes";
+import bookmarksRouter from "./bookmarks";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(rootSearchRouter);
 router.use(thematicSearchRouter);
 router.use(tasreefRouter);
 router.use(notesRouter);
+router.use(bookmarksRouter);
 
 export default router;

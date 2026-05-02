@@ -1,4 +1,4 @@
-export type TafseerEdition = 'en.kathir' | 'ur.maarifulquran';
+export type TafseerEdition = 'ar.jalalayn' | 'ar.muyassar';
 
 export interface TafseerAyah {
   numberInSurah: number;
@@ -6,18 +6,18 @@ export interface TafseerAyah {
 }
 
 export const TAFSEER_META: Record<TafseerEdition, { labelEn: string; labelUr: string; sourceEn: string; sourceUr: string; rtl: boolean }> = {
-  'en.kathir': {
-    labelEn: 'Ibn Katheer (English)',
-    labelUr: 'ابن کثیر (انگریزی)',
-    sourceEn: 'Tafsir Ibn Kathir — Imam Ibn Kathir al-Dimashqi (774–1373 CE)',
-    sourceUr: 'تفسیر ابن کثیر — امام ابن کثیر دمشقی',
-    rtl: false,
+  'ar.jalalayn': {
+    labelEn: 'Tafseer Al-Jalalayn (Arabic)',
+    labelUr: 'تفسیر الجلالین (عربی)',
+    sourceEn: 'Tafsir al-Jalalayn — Imam Jalal al-Din al-Mahalli & Jalal al-Din al-Suyuti',
+    sourceUr: 'تفسیر الجلالین — امام جلال الدین المحلی و جلال الدین السیوطی',
+    rtl: true,
   },
-  'ur.maarifulquran': {
-    labelEn: "Ma'ariful Quran (Urdu)",
-    labelUr: 'معارف القرآن (اردو)',
-    sourceEn: "Ma'ariful Quran — Mufti Muhammad Shafi Usmani",
-    sourceUr: 'معارف القرآن — مفتی محمد شفیع عثمانی',
+  'ar.muyassar': {
+    labelEn: 'Al-Muyassar (Arabic)',
+    labelUr: 'المیسر (عربی)',
+    sourceEn: "Al-Muyassar — King Fahd Quran Printing Complex, Madinah",
+    sourceUr: 'المیسر — مجمع الملک فہد لطباعۃ المصحف الشریف',
     rtl: true,
   },
 };

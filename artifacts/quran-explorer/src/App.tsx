@@ -13,9 +13,11 @@ import { RootSearch } from './components/RootSearch';
 import { ThematicSearch } from './components/ThematicSearch';
 import { getAllSurahs } from './services/quranService';
 import { getAllNotes, saveNote, deleteNote } from './services/notesService';
+import { getAllBookmarks, addBookmark, removeBookmark, isBookmarked, replaceAllBookmarks } from './services/bookmarkService';
 import { NotesPanel } from './components/NotesPanel';
-import { Surah, Note } from './types';
-import { Loader2, BookOpen, Star, Languages, GitBranch, Sparkles, Clock, FileText } from 'lucide-react';
+import { BookmarksPanel } from './components/BookmarksPanel';
+import { Surah, Note, Bookmark } from './types';
+import { Loader2, BookOpen, Star, Languages, GitBranch, Sparkles, Clock, FileText, Bookmark as BookmarkIcon } from 'lucide-react';
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
@@ -95,8 +97,10 @@ function AppContent() {
   const [selectedSurah, setSelectedSurah] = useState<Surah | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>(getAllBookmarks());
   const [recentNums, setRecentNums] = useState<number[]>(getRecentNums());
   const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
+  const [isBookmarksPanelOpen, setIsBookmarksPanelOpen] = useState(false);
   const [targetAyah, setTargetAyah] = useState<number | undefined>(undefined);
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
   const [isConjugationOpen, setIsConjugationOpen] = useState(false);
@@ -136,6 +140,24 @@ function AppContent() {
     }
   }, [authLoaded, isSignedIn, user?.id]);
 
+  // Load bookmarks: from API when signed in, else localStorage
+  useEffect(() => {
+    if (!authLoaded) return;
+    if (isSignedIn) {
+      fetch(`${basePath}/api/bookmarks`, { credentials: 'include' })
+        .then(r => r.ok ? r.json() : null)
+        .then((data: Bookmark[] | null) => {
+          if (data && Array.isArray(data)) {
+            replaceAllBookmarks(data);
+            setBookmarks(data);
+          }
+        })
+        .catch(() => setBookmarks(getAllBookmarks()));
+    } else {
+      setBookmarks(getAllBookmarks());
+    }
+  }, [authLoaded, isSignedIn, user?.id]);
+
   const handleSearch = (query: string) => {
     const q = query.toLowerCase();
     setFilteredSurahs(surahs.filter(s =>
@@ -169,10 +191,58 @@ function AppContent() {
     }
   };
 
+  const handleToggleBookmark = (surahNumber: number, ayahNumber: number) => {
+    const surah = surahs.find(s => s.number === surahNumber);
+    if (!surah) return;
+
+    if (isBookmarked(surahNumber, ayahNumber)) {
+      removeBookmark(surahNumber, ayahNumber);
+      setBookmarks(getAllBookmarks());
+      if (isSignedIn) {
+        fetch(`${basePath}/api/bookmarks/${surahNumber}/${ayahNumber}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        }).catch(() => {});
+      }
+    } else {
+      addBookmark(surahNumber, ayahNumber, surah.englishName, surah.name);
+      setBookmarks(getAllBookmarks());
+      if (isSignedIn) {
+        fetch(`${basePath}/api/bookmarks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ surahNumber, ayahNumber, surahName: surah.englishName, surahNameAr: surah.name }),
+        }).catch(() => {});
+      }
+    }
+  };
+
+  const handleDeleteBookmark = (surahNumber: number, ayahNumber: number) => {
+    removeBookmark(surahNumber, ayahNumber);
+    setBookmarks(getAllBookmarks());
+    if (isSignedIn) {
+      fetch(`${basePath}/api/bookmarks/${surahNumber}/${ayahNumber}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      }).catch(() => {});
+    }
+  };
+
   const handleNavigateToNote = (surahNumber: number, ayahNumber: number) => {
     const s = surahs.find(x => x.number === surahNumber);
     if (!s) return;
     setIsNotesPanelOpen(false);
+    setTargetAyah(ayahNumber);
+    pushRecent(s.number);
+    setRecentNums(getRecentNums());
+    setSelectedSurah(s);
+  };
+
+  const handleNavigateToBookmark = (surahNumber: number, ayahNumber: number) => {
+    const s = surahs.find(x => x.number === surahNumber);
+    if (!s) return;
+    setIsBookmarksPanelOpen(false);
     setTargetAyah(ayahNumber);
     pushRecent(s.number);
     setRecentNums(getRecentNums());
@@ -189,6 +259,8 @@ function AppContent() {
   const recentSurahs = recentNums
     .map(n => surahs.find(s => s.number === n))
     .filter(Boolean) as Surah[];
+
+  const isUrdu = t('langToggle') === 'English';
 
   return (
     <Layout
@@ -229,6 +301,15 @@ function AppContent() {
         />
       )}
 
+      {isBookmarksPanelOpen && (
+        <BookmarksPanel
+          bookmarks={bookmarks}
+          onClose={() => setIsBookmarksPanelOpen(false)}
+          onNavigate={handleNavigateToBookmark}
+          onDelete={handleDeleteBookmark}
+        />
+      )}
+
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-32 gap-4">
           <Loader2 className="animate-spin" size={40} style={{ color: 'var(--grove-green)' }} />
@@ -244,6 +325,8 @@ function AppContent() {
           onSaveNote={handleSaveNote}
           fontSize={fontSize}
           scrollToAyah={targetAyah}
+          bookmarks={bookmarks}
+          onToggleBookmark={handleToggleBookmark}
         />
       ) : (
         <div className="space-y-12">
@@ -279,12 +362,38 @@ function AppContent() {
                 <div>
                   <div className="font-bold text-sm" style={{ color: 'var(--grove-purple)' }}>{label}</div>
                   <div className="text-[11px] opacity-55 mt-0.5 leading-snug" style={{ color: 'var(--grove-purple)' }}>
-                    {t('langToggle') === 'English' ? descUr : descEn}
+                    {isUrdu ? descUr : descEn}
                   </div>
                 </div>
               </button>
             ))}
           </div>
+
+          {/* My Bookmarks shortcut */}
+          {bookmarks.length > 0 && (
+            <button
+              onClick={() => setIsBookmarksPanelOpen(true)}
+              className="w-full flex items-center gap-4 p-5 rounded-2xl border text-left transition-all hover:shadow-md hover:scale-[1.005] group"
+              style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}
+            >
+              <div className="p-2.5 rounded-xl shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)' }}>
+                <BookmarkIcon size={20} style={{ color: 'var(--grove-gold)' }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm" style={{ color: 'var(--grove-purple)' }}>
+                  {isUrdu ? 'میرے بُک مارکس' : 'My Bookmarks'}
+                </div>
+                <div className="text-[11px] opacity-55 mt-0.5" style={{ color: 'var(--grove-purple)' }}>
+                  {bookmarks.length} {isUrdu
+                    ? 'آیات محفوظ ہیں'
+                    : `saved ayah${bookmarks.length !== 1 ? 's' : ''} across ${new Set(bookmarks.map(b => b.surahNumber)).size} surah${new Set(bookmarks.map(b => b.surahNumber)).size !== 1 ? 's' : ''}`}
+                </div>
+              </div>
+              <div className="text-xs font-bold opacity-40 group-hover:opacity-70 transition-opacity shrink-0" style={{ color: 'var(--grove-purple)' }}>
+                {isUrdu ? 'دیکھیں' : 'View all →'}
+              </div>
+            </button>
+          )}
 
           {/* My Notes shortcut */}
           {notes.filter(n => n.content.trim()).length > 0 && (
@@ -298,15 +407,15 @@ function AppContent() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-sm" style={{ color: 'var(--grove-purple)' }}>
-                  {t('langToggle') === 'English' ? 'میرے نوٹس' : 'My Notes'}
+                  {isUrdu ? 'میرے نوٹس' : 'My Notes'}
                 </div>
                 <div className="text-[11px] opacity-55 mt-0.5" style={{ color: 'var(--grove-purple)' }}>
                   {notes.filter(n => n.content.trim()).length}{' '}
-                  {t('langToggle') === 'English' ? 'نوٹ محفوظ ہیں' : `saved note${notes.filter(n => n.content.trim()).length !== 1 ? 's' : ''} across ${new Set(notes.filter(n => n.content.trim()).map(n => n.surahNumber)).size} surah${new Set(notes.filter(n => n.content.trim()).map(n => n.surahNumber)).size !== 1 ? 's' : ''}`}
+                  {isUrdu ? 'نوٹ محفوظ ہیں' : `saved note${notes.filter(n => n.content.trim()).length !== 1 ? 's' : ''} across ${new Set(notes.filter(n => n.content.trim()).map(n => n.surahNumber)).size} surah${new Set(notes.filter(n => n.content.trim()).map(n => n.surahNumber)).size !== 1 ? 's' : ''}`}
                 </div>
               </div>
               <div className="text-xs font-bold opacity-40 group-hover:opacity-70 transition-opacity shrink-0" style={{ color: 'var(--grove-purple)' }}>
-                {t('langToggle') === 'English' ? 'دیکھیں' : 'View all →'}
+                {isUrdu ? 'دیکھیں' : 'View all →'}
               </div>
             </button>
           )}
@@ -320,10 +429,10 @@ function AppContent() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold uppercase tracking-widest" style={{ color: 'var(--grove-purple)' }}>
-                    {t('langToggle') === 'English' ? 'حال ہی میں دیکھا' : 'Recently Viewed'}
+                    {isUrdu ? 'حال ہی میں دیکھا' : 'Recently Viewed'}
                   </h3>
                   <p className="text-xs opacity-50" style={{ color: 'var(--grove-purple)' }}>
-                    {t('langToggle') === 'English' ? 'آپ کے آخری سورے' : 'Your last visited surahs'}
+                    {isUrdu ? 'آپ کے آخری سورے' : 'Your last visited surahs'}
                   </p>
                 </div>
               </div>

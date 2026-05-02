@@ -35,3 +35,12 @@ export interface Note {
   content: string;
   updatedAt: string;
 }
+
+export interface Bookmark {
+  id: string;
+  surahNumber: number;
+  ayahNumber: number;
+  surahName: string;
+  surahNameAr: string;
+  createdAt: string;
+}

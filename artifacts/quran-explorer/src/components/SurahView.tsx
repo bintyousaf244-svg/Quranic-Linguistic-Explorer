@@ -4,6 +4,7 @@ import { getSurahDetail } from '../services/quranService';
 import { fetchSurahTafseer, TafseerEdition, TAFSEER_META } from '../services/tafseerService';
 import { ReciterId, RECITERS, getAyahAudioUrl, playAyahAudio, stopAyahAudio } from '../services/audioService';
 import { AyahCard } from './AyahCard';
+import { Bookmark } from '../types';
 import { Loader2, ArrowLeft, ArrowUp, BookMarked, Headphones, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../context/useLanguage';
 import { surahUrduMeanings } from '../lib/surahUrduNames';
@@ -15,9 +16,11 @@ interface SurahViewProps {
   onSaveNote: (surahNumber: number, ayahNumber: number, content: string) => void;
   fontSize: number;
   scrollToAyah?: number;
+  bookmarks: Bookmark[];
+  onToggleBookmark: (surahNumber: number, ayahNumber: number) => void;
 }
 
-export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSaveNote, fontSize, scrollToAyah }) => {
+export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSaveNote, fontSize, scrollToAyah, bookmarks, onToggleBookmark }) => {
   const { lang, t } = useLanguage();
   const isUrdu = lang === 'ur';
 
@@ -141,8 +144,8 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
 
   const tafseerOptions: { value: TafseerEdition | null; label: string }[] = [
     { value: null, label: t('tafseerOff') },
-    { value: 'en.kathir', label: t('tafseerIbnKathir') },
-    { value: 'ur.maarifulquran', label: t('tafseerMaarif') },
+    { value: 'ar.jalalayn', label: t('tafseerJalalayn') },
+    { value: 'ar.muyassar', label: t('tafseerMuyassar') },
   ];
 
   const reciterOptions: { value: ReciterId | null; label: string }[] = [
@@ -302,14 +305,10 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
               tafseerEdition={selectedTafseer ?? undefined}
               hasReciter={!!reciterId}
               isPlaying={playingAyah === ayah.numberInSurah}
-              onPlay={() => {
-                stopAyahAudio();
-                playAyah(ayah.numberInSurah);
-              }}
-              onPause={() => {
-                stopAyahAudio();
-                setPlayingAyah(null);
-              }}
+              onPlay={() => { stopAyahAudio(); playAyah(ayah.numberInSurah); }}
+              onPause={() => { stopAyahAudio(); setPlayingAyah(null); }}
+              isBookmarked={bookmarks.some(b => b.surahNumber === surah.number && b.ayahNumber === ayah.numberInSurah)}
+              onToggleBookmark={() => onToggleBookmark(surah.number, ayah.numberInSurah)}
             />
           </div>
         ))}

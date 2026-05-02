@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Ayah, Note } from '../types';
-import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked, Play, Pause, Volume2 } from 'lucide-react';
+import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked, Play, Pause, Volume2, Bookmark } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { streamAnalysis, fetchAuthenticGrammar } from '../services/analysisService';
 import { AnalysisCache } from '../services/cacheService';
@@ -21,11 +21,14 @@ interface AyahCardProps {
   isPlaying?: boolean;
   onPlay?: () => void;
   onPause?: () => void;
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
 }
 
 export const AyahCard: React.FC<AyahCardProps> = ({
   ayah, surahName, surahNumber, note, onSaveNote, fontSize, highlighted,
   tafseerText, tafseerEdition, hasReciter, isPlaying, onPlay, onPause,
+  isBookmarked, onToggleBookmark,
 }) => {
   const { lang, t } = useLanguage();
 
@@ -251,6 +254,17 @@ export const AyahCard: React.FC<AyahCardProps> = ({
               style={{ color: 'var(--grove-purple)' }}>
               {copiedType === 'ayah' ? <Check size={18} style={{ color: 'var(--grove-green)' }} /> : <Copy size={18} />}
             </button>
+            {onToggleBookmark && (
+              <button
+                onClick={onToggleBookmark}
+                className="p-2.5 rounded-xl transition-all hover:opacity-80 active:scale-95"
+                title={isBookmarked ? t('bookmarkRemove') : t('bookmarkAdd')}
+                style={{
+                  color: isBookmarked ? 'var(--grove-gold)' : `color-mix(in srgb, var(--grove-gold) 50%, transparent)`,
+                }}>
+                <Bookmark size={18} fill={isBookmarked ? 'var(--grove-gold)' : 'none'} />
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
