@@ -87,6 +87,7 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
             key={ayah.number}
             ayah={ayah}
             surahName={surah.englishName}
+            surahNumber={surah.number}
             note={notes.find(n => n.surahNumber === surah.number && n.ayahNumber === ayah.numberInSurah)}
             onSaveNote={(content) => onSaveNote(surah.number, ayah.numberInSurah, content)}
             fontSize={fontSize}

@@ -57,6 +57,8 @@ export default function App() {
     setNotes(getAllNotes());
   };
 
+  const selectedSurahNumber = selectedSurah?.number;
+
   return (
     <Layout
       onSearch={handleSearch}
@@ -89,14 +91,14 @@ export default function App() {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest mb-6"
               style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)' }}>
               <Star size={14} />
-              AI-Powered Linguistic Analysis
+              Authentic Classical I'rab Sources
             </div>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ color: 'var(--grove-purple)' }}>
               Explore the Divine Word
             </h2>
             <p className="text-lg leading-relaxed font-medium opacity-70" style={{ color: 'var(--grove-purple)' }}>
-              Deep dive into the linguistic miracles of the Quran with Usmani script,
-              detailed grammar analysis, and morphological breakdowns — powered by Groq AI.
+              Deep dive into the linguistic miracles of the Quran — authentic I'rab from classical
+              works (الدعاس، الدرويش، النحاس), AI morphology, and word-by-word dictionary analysis.
             </p>
           </div>
 
@@ -116,8 +118,8 @@ export default function App() {
             </div>
             <SurahList
               surahs={filteredSurahs}
-              onSelect={setSelectedSurah}
-              selectedSurahNumber={selectedSurah?.number}
+              onSelect={(s) => setSelectedSurah(s)}
+              selectedSurahNumber={selectedSurahNumber}
             />
           </div>
         </div>

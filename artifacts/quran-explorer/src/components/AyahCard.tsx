@@ -2,21 +2,24 @@ import React, { useState } from 'react';
 import { Ayah, Note } from '../types';
 import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { streamAnalysis } from '../services/analysisService';
+import { streamAnalysis, fetchAuthenticGrammar } from '../services/analysisService';
 import { AnalysisCache } from '../services/cacheService';
 
 interface AyahCardProps {
   ayah: Ayah;
   surahName: string;
+  surahNumber: number;
   note?: Note;
   onSaveNote: (content: string) => void;
   fontSize: number;
 }
 
-export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, note, onSaveNote, fontSize }) => {
+export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber, note, onSaveNote, fontSize }) => {
   const [activeTabs, setActiveTabs] = useState<string[]>([]);
   const [activeTranslation, setActiveTranslation] = useState<'en' | 'ur' | 'ar' | 'none'>('en');
   const [grammarAnalysis, setGrammarAnalysis] = useState('');
+  const [grammarSourceLabel, setGrammarSourceLabel] = useState('');
+  const [grammarIsAuthentic, setGrammarIsAuthentic] = useState(false);
   const [morphologyAnalysis, setMorphologyAnalysis] = useState('');
   const [dictionaryAnalysis, setDictionaryAnalysis] = useState('');
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
@@ -45,19 +48,40 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, note, onSav
 
     const cached = AnalysisCache.get(type, surahName, ayah.numberInSurah);
     if (cached) {
-      if (type === 'grammar') setGrammarAnalysis(cached);
-      else if (type === 'morphology') setMorphologyAnalysis(cached);
+      if (type === 'grammar') {
+        const meta = AnalysisCache.getMeta(type, surahName, ayah.numberInSurah);
+        setGrammarAnalysis(cached);
+        setGrammarSourceLabel(meta?.sourceLabel ?? '');
+        setGrammarIsAuthentic(meta?.authentic ?? false);
+      } else if (type === 'morphology') setMorphologyAnalysis(cached);
       else setDictionaryAnalysis(cached);
       return;
     }
 
     setLoadingStates(prev => ({ ...prev, [type]: true }));
     try {
+      if (type === 'grammar') {
+        const authentic = await fetchAuthenticGrammar(surahNumber, ayah.numberInSurah);
+        if (authentic) {
+          setGrammarAnalysis(authentic.data);
+          setGrammarSourceLabel(authentic.sourceLabel);
+          setGrammarIsAuthentic(true);
+          AnalysisCache.set(type, surahName, ayah.numberInSurah, authentic.data, {
+            sourceLabel: authentic.sourceLabel,
+            authentic: true,
+          });
+          return;
+        }
+      }
+
       let fullText = '';
       await streamAnalysis(type, { ayahText: ayah.text, surahName, ayahNumber: ayah.numberInSurah }, (text) => {
         fullText = text;
-        if (type === 'grammar') setGrammarAnalysis(text);
-        else if (type === 'morphology') setMorphologyAnalysis(text);
+        if (type === 'grammar') {
+          setGrammarAnalysis(text);
+          setGrammarSourceLabel('');
+          setGrammarIsAuthentic(false);
+        } else if (type === 'morphology') setMorphologyAnalysis(text);
         else setDictionaryAnalysis(text);
       });
       if (fullText) AnalysisCache.set(type, surahName, ayah.numberInSurah, fullText);
@@ -99,49 +123,71 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, note, onSav
     </button>
   );
 
-  const Panel = ({ id, title, content, color, note: noteText, rtl }: { id: string; title: string; content: string; color: string; note?: string; rtl?: boolean }) => (
-    <div className="p-8 md:p-10 border-b" style={{ backgroundColor: `color-mix(in srgb, ${color} 6%, transparent)`, borderColor: `color-mix(in srgb, var(--grove-purple) 5%, transparent)` }}>
-      <div className="flex items-center justify-between mb-6">
-        <h4 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color }}>{title}</h4>
-        <div className="flex items-center gap-2">
-          {content && (
-            <button onClick={() => handleCopy(content, id)} className="p-2 transition-all hover:opacity-70" style={{ color }}>
-              {copiedType === id ? <Check size={18} style={{ color: 'var(--grove-green)' }} /> : <Copy size={18} />}
-            </button>
-          )}
-          <button onClick={() => toggleTab(id)} className="transition-all hover:opacity-70" style={{ color }}>
-            <X size={20} />
-          </button>
-        </div>
-      </div>
-      {loadingStates[id] ? (
-        <div className="flex flex-col items-center justify-center py-12 gap-3">
-          <Loader2 className="animate-spin" size={24} style={{ color }} />
-          <p className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color }}>Analyzing with AI...</p>
-        </div>
-      ) : (
-        <>
-          <div
-            className={`markdown-body prose prose-sm max-w-none${rtl ? ' markdown-rtl' : ''}`}
-            style={{
-              fontSize: `${analysisFontSize}px`,
-              direction: rtl ? 'rtl' : 'ltr',
-              textAlign: rtl ? 'right' : 'left',
-              fontFamily: rtl ? '"Amiri", serif' : undefined,
-            }}
-          >
-            <ReactMarkdown>{content}</ReactMarkdown>
+  const Panel = ({ id, title, content, color, note: noteText, rtl }: {
+    id: string; title: string; content: string; color: string; note?: string; rtl?: boolean
+  }) => {
+    const isGrammar = id === 'grammar';
+    const footerNote = isGrammar
+      ? grammarIsAuthentic
+        ? grammarSourceLabel
+        : "AI analysis based on الإعراب الميسر methodology — verify with classical references."
+      : noteText;
+
+    return (
+      <div className="p-8 md:p-10 border-b" style={{ backgroundColor: `color-mix(in srgb, ${color} 6%, transparent)`, borderColor: `color-mix(in srgb, var(--grove-purple) 5%, transparent)` }}>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h4 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color }}>{title}</h4>
+            {isGrammar && grammarIsAuthentic && content && (
+              <span className="text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                style={{ backgroundColor: `color-mix(in srgb, var(--grove-green) 15%, transparent)`, color: 'var(--grove-green)' }}>
+                Authentic Source
+              </span>
+            )}
           </div>
-          {noteText && (
-            <div className="mt-8 pt-4 border-t text-[10px] italic opacity-40"
-              style={{ borderColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}>
-              {noteText}
+          <div className="flex items-center gap-2">
+            {content && (
+              <button onClick={() => handleCopy(content, id)} className="p-2 transition-all hover:opacity-70" style={{ color }}>
+                {copiedType === id ? <Check size={18} style={{ color: 'var(--grove-green)' }} /> : <Copy size={18} />}
+              </button>
+            )}
+            <button onClick={() => toggleTab(id)} className="transition-all hover:opacity-70" style={{ color }}>
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+        {loadingStates[id] ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Loader2 className="animate-spin" size={24} style={{ color }} />
+            <p className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color }}>
+              {isGrammar ? 'Fetching authentic I\'rab...' : 'Analyzing with AI...'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div
+              className={`markdown-body prose prose-sm max-w-none${rtl ? ' markdown-rtl' : ''}`}
+              style={{
+                fontSize: `${analysisFontSize}px`,
+                direction: rtl ? 'rtl' : 'ltr',
+                textAlign: rtl ? 'right' : 'left',
+                fontFamily: rtl ? '"Amiri", serif' : undefined,
+              }}
+            >
+              <ReactMarkdown>{content}</ReactMarkdown>
             </div>
-          )}
-        </>
-      )}
-    </div>
-  );
+            {footerNote && (
+              <div className="mt-8 pt-4 border-t text-[10px] italic opacity-40 flex items-center gap-1.5"
+                style={{ borderColor: `color-mix(in srgb, ${color} 15%, transparent)`, color, direction: 'rtl', textAlign: 'right', fontFamily: '"Amiri", serif' }}>
+                {isGrammar && grammarIsAuthentic && <span style={{ opacity: 0.7 }}>📚</span>}
+                {footerNote}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="rounded-[2rem] overflow-hidden mb-8 transition-all border"
@@ -160,7 +206,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, note, onSav
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <TabBtn id="dictionary" label="Dictionary" icon={Languages} color="var(--grove-teal)" />
-            <TabBtn id="grammar" label="Grammar" icon={BookOpen} color="var(--grove-purple)" />
+            <TabBtn id="grammar" label="I'rab" icon={BookOpen} color="var(--grove-purple)" />
             <TabBtn id="morphology" label="Morphology" icon={FileText} color="var(--grove-gold)" />
             <TabBtn id="notes" label="Notes" icon={MessageSquare} color="var(--grove-pink)" />
           </div>
@@ -212,8 +258,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, note, onSav
 
       <div className="flex flex-col border-t" style={{ borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
         {activeTabs.includes('grammar') && (
-          <Panel id="grammar" title="Arabic Grammar Analysis (I'rab)" content={grammarAnalysis} color="var(--grove-purple)" rtl
-            note="Analysis aligned with classical works including I'rab al-Quran by Al-Darwish and Al-Nahhas." />
+          <Panel id="grammar" title="Arabic I'rab (إعراب)" content={grammarAnalysis} color="var(--grove-purple)" rtl />
         )}
         {activeTabs.includes('dictionary') && (
           <Panel id="dictionary" title="Word Dictionary" content={dictionaryAnalysis} color="var(--grove-teal)"

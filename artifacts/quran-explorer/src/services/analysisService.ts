@@ -2,6 +2,21 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 type AnalysisType = 'grammar' | 'morphology' | 'dictionary' | 'word';
 
+export interface GrammarResult {
+  data: string;
+  sourceLabel: string;
+  ayahsStart: number;
+  count: number;
+}
+
+export async function fetchAuthenticGrammar(surah: number, ayah: number): Promise<GrammarResult | null> {
+  const response = await fetch(`${BASE}/api/grammar?surah=${surah}&ayah=${ayah}`);
+  if (!response.ok) return null;
+  const json = await response.json();
+  if (!json.data) return null;
+  return json as GrammarResult;
+}
+
 export async function streamAnalysis(
   type: AnalysisType,
   payload: { ayahText?: string; surahName?: string; ayahNumber?: number; word?: string },

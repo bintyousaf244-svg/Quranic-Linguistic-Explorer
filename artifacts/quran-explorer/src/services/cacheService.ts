@@ -1,4 +1,4 @@
-const CACHE_PREFIX = 'quran_analysis_v4_';
+const CACHE_PREFIX = 'quran_analysis_v5_';
 
 function purgeOldCache() {
   try {
@@ -16,6 +16,11 @@ function purgeOldCache() {
 
 purgeOldCache();
 
+interface CacheMeta {
+  sourceLabel?: string;
+  authentic?: boolean;
+}
+
 export const AnalysisCache = {
   get: (type: string, surahName: string, ayahNumber: number): string | null => {
     try {
@@ -24,10 +29,22 @@ export const AnalysisCache = {
     } catch { return null; }
   },
 
-  set: (type: string, surahName: string, ayahNumber: number, content: string): void => {
+  getMeta: (type: string, surahName: string, ayahNumber: number): CacheMeta | null => {
+    try {
+      const key = `${CACHE_PREFIX}meta_${type}_${surahName}_${ayahNumber}`;
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  },
+
+  set: (type: string, surahName: string, ayahNumber: number, content: string, meta?: CacheMeta): void => {
     try {
       const key = `${CACHE_PREFIX}${type}_${surahName}_${ayahNumber}`;
       localStorage.setItem(key, content);
+      if (meta) {
+        const metaKey = `${CACHE_PREFIX}meta_${type}_${surahName}_${ayahNumber}`;
+        localStorage.setItem(metaKey, JSON.stringify(meta));
+      }
     } catch { /* ignore */ }
   },
 
