@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Amiri:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@theme inline {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: "Amiri", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-grove-purple: var(--grove-purple);
+  --color-grove-green: var(--grove-green);
+  --color-grove-pink: var(--grove-pink);
+  --color-grove-gold: var(--grove-gold);
+  --color-grove-teal: var(--grove-teal);
+  --color-grove-cream: var(--grove-cream);
+  --color-grove-paper: var(--grove-paper);
+}
+
+:root {
+  --grove-purple: #582C6F;
+  --grove-green: #416D53;
+  --grove-pink: #D97B8F;
+  --grove-gold: #B08B1E;
+  --grove-teal: #4A899B;
+  --grove-cream: #FDF9F3;
+  --grove-paper: #FFFFFF;
+}
+
+.dark {
+  --grove-purple: #E9D5FF;
+  --grove-green: #86EFAC;
+  --grove-pink: #F9A8D4;
+  --grove-gold: #FDE047;
+  --grove-teal: #67E8F9;
+  --grove-cream: #0F0912;
+  --grove-paper: #1A121F;
+}
+
+@layer base {
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--grove-cream);
+    color: var(--grove-purple);
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  ::selection {
+    background-color: var(--grove-pink);
+    color: white;
+  }
+
+  .dir-rtl { direction: rtl; }
+  .font-arabic { font-family: "Amiri", serif; }
+}
+
+.markdown-body {
+  font-size: 0.875rem;
+  line-height: 1.75;
+}
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  font-weight: 700;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--grove-purple);
+}
+.markdown-body p { margin-bottom: 0.75rem; }
+.markdown-body ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.75rem; }
+.markdown-body ol { list-style: decimal; padding-left: 1.25rem; margin-bottom: 0.75rem; }
+.markdown-body strong { font-weight: 600; color: var(--grove-purple); }
+.markdown-body table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.8rem; }
+.markdown-body th { background-color: color-mix(in srgb, var(--grove-purple) 8%, transparent); font-weight: 700; text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid color-mix(in srgb, var(--grove-purple) 15%, transparent); }
+.markdown-body td { padding: 0.5rem 0.75rem; border-bottom: 1px solid color-mix(in srgb, var(--grove-purple) 8%, transparent); }
+.markdown-body tr:last-child td { border-bottom: none; }

@@ -1,27 +1,39 @@
-# Workspace
+# Quranic Linguistic Explorer
 
 ## Overview
+A full-stack web application for deep linguistic analysis of the Quran, powered by Groq AI. Originally built in Google AI Studio (Gemini), rebuilt here with Groq as the AI backend.
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+## Architecture
 
-## Stack
+### Frontend — `artifacts/quran-explorer` (React + Vite)
+- Served at `/` (root path)
+- Uses AlQuran Cloud API for Quran text (Uthmani script + translations)
+- Calls the backend `/api/analysis/stream` endpoint for AI analysis
+- Notes stored in `localStorage` (no auth required)
+- Dark mode toggle, font size control
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+### Backend — `artifacts/api-server` (Express)
+- Serves at `/api`
+- Groq AI integration via `groq-sdk` using model `llama-3.3-70b-versatile`
+- Streaming SSE endpoint: `POST /api/analysis/stream`
+  - Supports types: `grammar`, `morphology`, `dictionary`, `word`
 
-## Key Commands
+## Key Features
+- **114 Surahs** with Arabic (Uthmani script), English (Sahih International), Urdu (Jalandhry), and Arabic Tafsir (Jalalayn)
+- **Grammar Analysis (I'rab)** — based on classical works by Al-Darwish, Al-Zajjaj, Al-Nahhas
+- **Morphology Analysis (Sarf)** — follows Ibn Jinni and Al-Hamalawy methodology
+- **Word Dictionary** — cross-referenced with Lisan al-Arab, Mu'jam Maqayis al-Lugha, Lane's Lexicon
+- **Global Dictionary** — search any Arabic word
+- **Personal Notes** — saved per ayah in localStorage
+- **Dark mode** + adjustable Arabic font size
+- **Caching** — analysis results cached in localStorage/sessionStorage
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
+## Environment Variables
+- `GROQ_API_KEY` — Groq API key (stored as secret)
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+## Dependencies
+- `groq-sdk` in api-server for AI streaming
+- `react-markdown` in quran-explorer for rendering AI output
+- `@tailwindcss/typography` for markdown prose styling
+- `lucide-react` for icons
+- Google Fonts: Inter, Amiri (Arabic), JetBrains Mono
