@@ -1,6 +1,6 @@
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
-type AnalysisType = 'grammar' | 'morphology' | 'dictionary' | 'word';
+type AnalysisType = 'grammar' | 'morphology' | 'dictionary' | 'word' | 'conjugation';
 
 export interface GrammarResult {
   data: string;
