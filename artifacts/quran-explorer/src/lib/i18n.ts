@@ -26,6 +26,13 @@ export const strings = {
     tabIrab: "I'rab",
     tabMorph: 'Morphology',
     tabNotes: 'Notes',
+    tabTafseer: 'Tafseer',
+
+    tafseerOff: 'Off',
+    tafseerIbnKathir: 'Ibn Katheer',
+    tafseerMaarif: "Ma'ariful Quran",
+    tafseerLoading: 'Loading tafseer...',
+    tafseerLabel: 'Tafseer',
 
     transEn: 'English',
     transUr: 'Urdu',
@@ -99,6 +106,13 @@ export const strings = {
     tabIrab: 'اعراب',
     tabMorph: 'صرف',
     tabNotes: 'نوٹس',
+    tabTafseer: 'تفسیر',
+
+    tafseerOff: 'بند',
+    tafseerIbnKathir: 'ابن کثیر',
+    tafseerMaarif: 'معارف القرآن',
+    tafseerLoading: 'تفسیر لا رہے ہیں...',
+    tafseerLabel: 'تفسیر',
 
     transEn: 'انگریزی',
     transUr: 'اردو',

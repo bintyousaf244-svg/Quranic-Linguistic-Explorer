@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Ayah, Note } from '../types';
-import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages } from 'lucide-react';
+import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { streamAnalysis, fetchAuthenticGrammar } from '../services/analysisService';
 import { AnalysisCache } from '../services/cacheService';
 import { useLanguage } from '../context/useLanguage';
+import { TafseerEdition, TAFSEER_META } from '../services/tafseerService';
 
 interface AyahCardProps {
   ayah: Ayah;
@@ -14,9 +15,11 @@ interface AyahCardProps {
   onSaveNote: (content: string) => void;
   fontSize: number;
   highlighted?: boolean;
+  tafseerText?: string;
+  tafseerEdition?: TafseerEdition;
 }
 
-export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber, note, onSaveNote, fontSize, highlighted }) => {
+export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber, note, onSaveNote, fontSize, highlighted, tafseerText, tafseerEdition }) => {
   const { lang, t } = useLanguage();
 
   const [activeTabs, setActiveTabs] = useState<string[]>([]);
@@ -224,6 +227,9 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
             </button>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            {tafseerText && (
+              <TabBtn id="tafseer" label={t('tabTafseer')} icon={BookMarked} color="var(--grove-teal)" />
+            )}
             <TabBtn id="dictionary" label={t('tabDict')} icon={Languages} color="var(--grove-teal)" />
             <TabBtn id="grammar" label={t('tabIrab')} icon={BookOpen} color="var(--grove-purple)" />
             <TabBtn id="morphology" label={t('tabMorph')} icon={FileText} color="var(--grove-gold)" />
@@ -278,6 +284,51 @@ export const AyahCard: React.FC<AyahCardProps> = ({ ayah, surahName, surahNumber
       </div>
 
       <div className="flex flex-col border-t" style={{ borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
+        {activeTabs.includes('tafseer') && tafseerText && tafseerEdition && (() => {
+          const meta = TAFSEER_META[tafseerEdition];
+          const isRtl = meta.rtl;
+          return (
+            <div className="p-8 md:p-10 border-b" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 5%, transparent)', borderColor: 'color-mix(in srgb, var(--grove-purple) 5%, transparent)' }}>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <h4 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: 'var(--grove-teal)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+                    {t('tabTafseer')}
+                  </h4>
+                  <span className="text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 15%, transparent)', color: 'var(--grove-teal)' }}>
+                    {isUrdu ? meta.labelUr : meta.labelEn}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleCopy(tafseerText, 'tafseer')} className="p-2 transition-all hover:opacity-70" style={{ color: 'var(--grove-teal)' }}>
+                    {copiedType === 'tafseer' ? <Check size={18} style={{ color: 'var(--grove-green)' }} /> : <Copy size={18} />}
+                  </button>
+                  <button onClick={() => toggleTab('tafseer')} className="transition-all hover:opacity-70" style={{ color: 'var(--grove-teal)' }}>
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              <div
+                className="leading-loose"
+                style={{
+                  fontSize: isRtl ? `${Math.max(18, analysisFontSize * 1.1)}px` : `${analysisFontSize}px`,
+                  direction: isRtl ? 'rtl' : 'ltr',
+                  textAlign: isRtl ? 'right' : 'left',
+                  fontFamily: isRtl ? '"Amiri", serif' : undefined,
+                  color: 'var(--grove-purple)',
+                  opacity: 0.85,
+                  lineHeight: isRtl ? 2.4 : 1.8,
+                }}
+              >
+                {tafseerText}
+              </div>
+              <div className="mt-6 pt-4 border-t text-[10px] italic opacity-35 flex items-center gap-1.5"
+                style={{ borderColor: 'color-mix(in srgb, var(--grove-teal) 15%, transparent)', color: 'var(--grove-teal)', direction: 'rtl', textAlign: 'right', fontFamily: '"Amiri", serif' }}>
+                📚 {isUrdu ? meta.sourceUr : meta.sourceEn}
+              </div>
+            </div>
+          );
+        })()}
         {activeTabs.includes('grammar') && (
           <Panel id="grammar" title="Arabic I'rab (إعراب)" content={grammarAnalysis} color="var(--grove-purple)" rtl />
         )}

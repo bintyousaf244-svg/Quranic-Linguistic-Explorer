@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Surah, SurahDetail, Note } from '../types';
 import { getSurahDetail } from '../services/quranService';
+import { fetchSurahTafseer, TafseerEdition, TAFSEER_META } from '../services/tafseerService';
 import { AyahCard } from './AyahCard';
-import { Loader2, ArrowLeft, ArrowUp } from 'lucide-react';
+import { Loader2, ArrowLeft, ArrowUp, BookMarked } from 'lucide-react';
 import { useLanguage } from '../context/useLanguage';
 import { surahUrduMeanings } from '../lib/surahUrduNames';
 
@@ -23,6 +24,11 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
   const [isLoading, setIsLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
+  const [selectedTafseer, setSelectedTafseer] = useState<TafseerEdition | null>(null);
+  const [tafseerMap, setTafseerMap] = useState<Map<number, string>>(new Map());
+  const [isTafseerLoading, setIsTafseerLoading] = useState(false);
+  const [tafseerError, setTafseerError] = useState<string | null>(null);
+
   useEffect(() => {
     const handleScroll = () => setShowScrollTop(window.scrollY > 500);
     window.addEventListener('scroll', handleScroll);
@@ -35,6 +41,8 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
       .then(setDetail)
       .catch(console.error)
       .finally(() => setIsLoading(false));
+    setSelectedTafseer(null);
+    setTafseerMap(new Map());
   }, [surah.number]);
 
   // Scroll to a specific ayah once content loads
@@ -45,6 +53,24 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
       setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
     }
   }, [scrollToAyah, isLoading, surah.number]);
+
+  // Fetch tafseer when selection changes
+  useEffect(() => {
+    if (!selectedTafseer) {
+      setTafseerMap(new Map());
+      return;
+    }
+    setIsTafseerLoading(true);
+    setTafseerError(null);
+    fetchSurahTafseer(surah.number, selectedTafseer)
+      .then((ayahs) => {
+        const m = new Map<number, string>();
+        ayahs.forEach(a => m.set(a.numberInSurah, a.text));
+        setTafseerMap(m);
+      })
+      .catch(() => setTafseerError('Failed to load tafseer. Please try again.'))
+      .finally(() => setIsTafseerLoading(false));
+  }, [selectedTafseer, surah.number]);
 
   const revelationLabel = (type: string) => {
     if (type === 'Meccan') return t('meccan');
@@ -69,9 +95,15 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
     ? surahUrduMeanings[surah.number] ?? surah.englishNameTranslation
     : surah.englishNameTranslation;
 
+  const tafseerOptions: { value: TafseerEdition | null; label: string }[] = [
+    { value: null, label: t('tafseerOff') },
+    { value: 'en.kathir', label: t('tafseerIbnKathir') },
+    { value: 'ur.maarifulquran', label: t('tafseerMaarif') },
+  ];
+
   return (
     <div>
-      <div className="mb-12 text-center relative rounded-[2rem] p-10 md:p-14 border"
+      <div className="mb-8 text-center relative rounded-[2rem] p-10 md:p-14 border"
         style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
         <button
           onClick={onBack}
@@ -108,6 +140,57 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
         )}
       </div>
 
+      {/* Tafseer selector bar */}
+      <div className="mb-8 rounded-2xl border p-4 flex flex-wrap items-center gap-3"
+        style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 12%, transparent)' }}>
+            <BookMarked size={15} style={{ color: 'var(--grove-teal)' }} />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: 'var(--grove-teal)', fontFamily: isUrdu ? '"Amiri", serif' : undefined, fontSize: isUrdu ? '13px' : undefined }}>
+            {t('tafseerLabel')}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-2 flex-1">
+          {tafseerOptions.map(opt => (
+            <button
+              key={opt.value ?? 'off'}
+              onClick={() => setSelectedTafseer(opt.value)}
+              className="px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all"
+              style={{
+                backgroundColor: selectedTafseer === opt.value
+                  ? 'var(--grove-teal)'
+                  : 'color-mix(in srgb, var(--grove-teal) 10%, transparent)',
+                color: selectedTafseer === opt.value ? 'white' : 'var(--grove-teal)',
+                fontFamily: isUrdu ? '"Amiri", serif' : undefined,
+                fontSize: isUrdu ? '13px' : undefined,
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {isTafseerLoading && (
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-60"
+            style={{ color: 'var(--grove-teal)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}>
+            <Loader2 className="animate-spin" size={13} />
+            {t('tafseerLoading')}
+          </div>
+        )}
+        {tafseerError && (
+          <span className="text-[10px] text-red-500 font-medium">{tafseerError}</span>
+        )}
+        {selectedTafseer && !isTafseerLoading && tafseerMap.size > 0 && (
+          <span className="text-[10px] opacity-40 italic" style={{ color: 'var(--grove-purple)', direction: isUrdu && selectedTafseer === 'ur.maarifulquran' ? 'rtl' : 'ltr', fontFamily: '"Amiri", serif' }}>
+            {isUrdu
+              ? TAFSEER_META[selectedTafseer].sourceUr
+              : TAFSEER_META[selectedTafseer].sourceEn}
+          </span>
+        )}
+      </div>
+
       <div className="max-w-4xl mx-auto">
         {detail.ayahs.map((ayah) => (
           <div key={ayah.number} id={`ayah-${surah.number}-${ayah.numberInSurah}`}>
@@ -119,6 +202,8 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
               onSaveNote={(content) => onSaveNote(surah.number, ayah.numberInSurah, content)}
               fontSize={fontSize}
               highlighted={scrollToAyah === ayah.numberInSurah}
+              tafseerText={tafseerMap.get(ayah.numberInSurah)}
+              tafseerEdition={selectedTafseer ?? undefined}
             />
           </div>
         ))}

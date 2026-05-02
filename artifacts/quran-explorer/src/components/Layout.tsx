@@ -117,7 +117,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 <div className="flex items-center gap-2">
                   {user?.imageUrl ? (
                     <img src={user.imageUrl} alt="" className="w-7 h-7 rounded-full object-cover ring-2 ring-offset-1"
-                      style={{ ringColor: 'var(--grove-purple)' }} />
+                      style={{ outline: '2px solid var(--grove-purple)', outlineOffset: '1px' }} />
                   ) : (
                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
                       style={{ backgroundColor: 'var(--grove-purple)' }}>
@@ -125,7 +125,7 @@ export const Layout: React.FC<LayoutProps> = ({
                     </div>
                   )}
                   <button
-                    onClick={() => signOut({ redirectUrl: `${basePath}/` })}
+                    onClick={() => signOut()}
                     className="p-2 rounded-full transition-all hover:opacity-80 hidden sm:flex"
                     style={{ backgroundColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)', color: 'var(--grove-purple)' }}
                     title="Sign out"
@@ -135,7 +135,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 </div>
               ) : (
                 <button
-                  onClick={() => openSignIn({ redirectUrl: `${basePath}/` })}
+                  onClick={() => openSignIn()}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all hover:opacity-90 text-white"
                   style={{ backgroundColor: 'var(--grove-purple)' }}
                 >

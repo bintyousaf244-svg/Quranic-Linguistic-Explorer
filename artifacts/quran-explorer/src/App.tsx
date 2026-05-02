@@ -359,7 +359,7 @@ function AppContent() {
             <SurahList
               surahs={filteredSurahs}
               onSelect={handleSelectSurah}
-              selectedSurahNumber={selectedSurah?.number}
+              selectedSurahNumber={undefined}
             />
           </div>
         </div>
