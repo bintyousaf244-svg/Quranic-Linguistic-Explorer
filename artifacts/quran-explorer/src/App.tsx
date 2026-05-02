@@ -11,7 +11,7 @@ import { ThematicSearch } from './components/ThematicSearch';
 import { getAllSurahs } from './services/quranService';
 import { getAllNotes, saveNote } from './services/notesService';
 import { Surah, Note } from './types';
-import { Loader2, BookOpen, Star } from 'lucide-react';
+import { Loader2, BookOpen, Star, Languages, GitBranch, Sparkles } from 'lucide-react';
 
 function AppContent() {
   const { t } = useLanguage();
@@ -137,6 +137,69 @@ function AppContent() {
             <p className="text-lg leading-relaxed font-medium opacity-70" style={{ color: 'var(--grove-purple)' }}>
               {t('heroDesc')}
             </p>
+          </div>
+
+          {/* Feature Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              {
+                key: 'dict',
+                icon: <Languages size={22} />,
+                label: t('dict'),
+                descEn: 'Word-by-word analysis',
+                descUr: 'لفظ بلفظ تجزیہ',
+                color: 'var(--grove-teal)',
+                bg: 'color-mix(in srgb, var(--grove-teal) 10%, transparent)',
+                onClick: () => setIsDictionaryOpen(true),
+              },
+              {
+                key: 'tasreef',
+                icon: <span style={{ fontFamily: '"Amiri", serif', fontSize: '22px', lineHeight: 1 }}>ص</span>,
+                label: t('tasreef'),
+                descEn: 'Verb conjugation table',
+                descUr: 'فعل کی گردان',
+                color: 'var(--grove-gold)',
+                bg: 'color-mix(in srgb, var(--grove-gold) 10%, transparent)',
+                onClick: () => setIsConjugationOpen(true),
+              },
+              {
+                key: 'roots',
+                icon: <GitBranch size={22} />,
+                label: t('roots'),
+                descEn: 'Search by Arabic root',
+                descUr: 'عربی جذر سے تلاش',
+                color: 'var(--grove-green)',
+                bg: 'color-mix(in srgb, var(--grove-green) 10%, transparent)',
+                onClick: () => setIsRootSearchOpen(true),
+              },
+              {
+                key: 'themes',
+                icon: <Sparkles size={22} />,
+                label: t('themes'),
+                descEn: 'AI thematic verse search',
+                descUr: 'موضوعی آیات تلاش',
+                color: 'var(--grove-purple)',
+                bg: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)',
+                onClick: () => setIsThematicOpen(true),
+              },
+            ].map(({ key, icon, label, descEn, descUr, color, bg, onClick }) => (
+              <button
+                key={key}
+                onClick={onClick}
+                className="flex flex-col items-start gap-3 p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:shadow-md"
+                style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: bg, color }}>
+                  {icon}
+                </div>
+                <div>
+                  <div className="font-bold text-sm" style={{ color: 'var(--grove-purple)' }}>{label}</div>
+                  <div className="text-[11px] opacity-55 mt-0.5 leading-snug" style={{ color: 'var(--grove-purple)' }}>
+                    {t('langToggle') === 'English' ? descUr : descEn}
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
 
           <div className="rounded-[2rem] p-8 border" style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
