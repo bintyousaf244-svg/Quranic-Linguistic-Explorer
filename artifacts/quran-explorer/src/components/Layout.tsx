@@ -133,10 +133,8 @@ export const Layout: React.FC<LayoutProps> = ({
       <header className="sticky top-0 z-50 border-b backdrop-blur-md px-4 py-3"
         style={{ backgroundColor: 'color-mix(in srgb, var(--grove-paper) 85%, transparent)', borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)' }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="p-2 rounded-lg shadow-sm text-white" style={{ backgroundColor: 'var(--grove-green)' }}>
-              <Book size={20} />
-            </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <img src="/logo.png" alt="Quranic Linguistic Explorer" className="h-9 w-9 object-contain rounded-md" />
             <h1 className="text-lg font-bold tracking-tight hidden sm:block" style={{ color: 'var(--grove-purple)', fontFamily: isUrdu ? 'var(--font-urdu-var)' : undefined }}>
               {t('appName')}
             </h1>
