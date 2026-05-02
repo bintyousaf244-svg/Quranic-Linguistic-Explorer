@@ -10,7 +10,7 @@ export const strings = {
 
     heroBadge: "Authentic Classical I'rab Sources",
     heroTitle: 'Explore the Divine Word',
-    heroDesc: "Deep dive into the linguistic miracles of the Quran — authentic I'rab from classical works (الدعاس، الدرويش، النحاس), AI morphology, and word-by-word dictionary analysis.",
+    heroDesc: "Deep dive into the linguistic miracles of the Quran — authentic I'rab from classical works, AI morphology, and word-by-word dictionary analysis.",
     sectionTitle: '114 Surahs',
     sectionSub: 'English · Urdu · Arabic Tafsir',
     loadingLib: 'Preparing the Quranic Library...',
@@ -105,7 +105,7 @@ export const strings = {
 
     heroBadge: 'مستند کلاسیکی اعراب',
     heroTitle: 'کلام الہی کا مطالعہ',
-    heroDesc: 'قرآن کریم کے لسانی اعجاز میں غوطہ لگائیں — مستند اعراب (الدعاس، الدرویش، النحاس)، AI صرف و نحو، اور لفظ بلفظ لغوی تجزیہ۔',
+    heroDesc: 'قرآن کریم کے لسانی اعجاز میں غوطہ لگائیں — مستند اعراب، AI صرف و نحو، اور لفظ بلفظ لغوی تجزیہ۔',
     sectionTitle: '١١٤ سورتیں',
     sectionSub: 'اردو · عربی تفسیر',
     loadingLib: 'قرآنی کتب خانہ تیار ہو رہا ہے...',
