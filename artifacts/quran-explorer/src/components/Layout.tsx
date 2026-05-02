@@ -1,5 +1,5 @@
 import React from 'react';
-import { Book, Search, Moon, Sun, Languages } from 'lucide-react';
+import { Book, Search, Moon, Sun } from 'lucide-react';
 import { useLanguage } from '../context/useLanguage';
 
 interface LayoutProps {
@@ -64,50 +64,6 @@ export const Layout: React.FC<LayoutProps> = ({
                   onChange={(e) => onSearch(e.target.value)}
                 />
               </div>
-            )}
-
-            {onOpenDictionary && (
-              <button
-                onClick={onOpenDictionary}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all hover:opacity-80"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 12%, transparent)', color: 'var(--grove-teal)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}
-              >
-                <Languages size={16} />
-                <span className="hidden sm:inline">{t('dict')}</span>
-              </button>
-            )}
-
-            {onOpenConjugation && (
-              <button
-                onClick={onOpenConjugation}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all hover:opacity-80"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)', fontFamily: '"Amiri", serif' }}
-              >
-                <span className="text-base leading-none">ص</span>
-                <span className="hidden sm:inline font-sans">{t('tasreef')}</span>
-              </button>
-            )}
-
-            {onOpenRootSearch && (
-              <button
-                onClick={onOpenRootSearch}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all hover:opacity-80"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-green) 12%, transparent)', color: 'var(--grove-green)', fontFamily: '"Amiri", serif' }}
-              >
-                <span className="text-base leading-none">ج</span>
-                <span className="hidden sm:inline font-sans">{t('roots')}</span>
-              </button>
-            )}
-
-            {onOpenThematicSearch && (
-              <button
-                onClick={onOpenThematicSearch}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all hover:opacity-80"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 12%, transparent)', color: 'var(--grove-teal)', fontFamily: isUrdu ? '"Amiri", serif' : undefined }}
-              >
-                <span className="text-base leading-none" style={{ fontFamily: '"Amiri", serif' }}>م</span>
-                <span className="hidden sm:inline">{t('themes')}</span>
-              </button>
             )}
 
             {/* Language Toggle */}
