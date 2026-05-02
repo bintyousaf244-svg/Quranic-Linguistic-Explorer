@@ -119,6 +119,16 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
       .finally(() => setIsTafseerLoading(false));
   }, [selectedTafseer, surah.number]);
 
+  // Ceiling lookup: tafsirs group multiple ayahs under one key (the last ayah of the group).
+  // For ayah N, return the text at the smallest key >= N.
+  const getTafseerForAyah = (ayahNum: number): string | undefined => {
+    if (tafseerMap.size === 0) return undefined;
+    if (tafseerMap.has(ayahNum)) return tafseerMap.get(ayahNum);
+    const sortedKeys = Array.from(tafseerMap.keys()).sort((a, b) => a - b);
+    const ceiling = sortedKeys.find(k => k >= ayahNum);
+    return ceiling !== undefined ? tafseerMap.get(ceiling) : undefined;
+  };
+
   const revelationLabel = (type: string) => {
     if (type === 'Meccan') return t('meccan');
     if (type === 'Medinan') return t('medinan');
@@ -301,7 +311,7 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
               onSaveNote={(content) => onSaveNote(surah.number, ayah.numberInSurah, content)}
               fontSize={fontSize}
               highlighted={scrollToAyah === ayah.numberInSurah}
-              tafseerText={tafseerMap.get(ayah.numberInSurah)}
+              tafseerText={getTafseerForAyah(ayah.numberInSurah)}
               tafseerEdition={selectedTafseer ?? undefined}
               hasReciter={!!reciterId}
               isPlaying={playingAyah === ayah.numberInSurah}
