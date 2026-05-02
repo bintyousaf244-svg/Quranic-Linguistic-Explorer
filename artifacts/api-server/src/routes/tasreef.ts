@@ -3,7 +3,8 @@ import Groq from 'groq-sdk';
 
 const router = Router();
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const MODEL = 'llama-3.3-70b-versatile';
+
+const MODEL = 'llama-3.1-8b-instant';
 
 router.post('/tasreef', async (req, res) => {
   const { verb } = req.body;
@@ -15,80 +16,71 @@ router.post('/tasreef', async (req, res) => {
 
   const v = verb.trim();
 
-  const systemPrompt = `You are an expert in classical Arabic morphology (علم الصرف). Given any Arabic verb in any form, you return a complete structured conjugation table as a strict JSON object. You MUST include full tashkeel (harakat) on every Arabic word. Never omit any pronoun row. Be precise.`;
+  const systemPrompt = `You are an expert in Arabic morphology (علم الصرف). Return ONLY valid JSON — no markdown, no prose. All Arabic must have complete tashkeel (harakat).`;
 
-  const userPrompt = `Given the Arabic verb: "${v}"
+  const PRONOUNS_MADI = [
+    ['هُوَ', 'he'],
+    ['هُمَا (مذ)', 'they two (m.)'],
+    ['هُمْ', 'they (m.)'],
+    ['هِيَ', 'she'],
+    ['هُمَا (مؤ)', 'they two (f.)'],
+    ['هُنَّ', 'they (f.)'],
+    ['أَنْتَ', 'you (m.s.)'],
+    ['أَنْتِ', 'you (f.s.)'],
+    ['أَنْتُمَا', 'you two'],
+    ['أَنْتُمْ', 'you (m.pl.)'],
+    ['أَنْتُنَّ', 'you (f.pl.)'],
+    ['أَنَا', 'I'],
+    ['نَحْنُ', 'we'],
+  ];
 
-Return ONLY valid JSON (no markdown, no prose) matching this exact schema:
+  const PRONOUNS_AMR = [
+    ['أَنْتَ', 'you (m.s.)'],
+    ['أَنْتِ', 'you (f.s.)'],
+    ['أَنْتُمَا', 'you two'],
+    ['أَنْتُمْ', 'you (m.pl.)'],
+    ['أَنْتُنَّ', 'you (f.pl.)'],
+  ];
+
+  const madiTemplate = PRONOUNS_MADI.map(([p, e]) =>
+    `{"pronoun":"${p}","pronounEn":"${e}","maloom":"?","maloomTranslit":"?","majhool":"?","majhoolTranslit":"?"}`
+  ).join(',\n    ');
+
+  const mudariTemplate = PRONOUNS_MADI.map(([p, e]) =>
+    `{"pronoun":"${p}","pronounEn":"${e}","marfu":"?","marfuTranslit":"?","mansub":"?","mansubTranslit":"?","majzum":"?","majzumTranslit":"?","muakkad":"?","muakkadTranslit":"?","maloomMajhool":"?","maloomMajhoolTranslit":"?"}`
+  ).join(',\n    ');
+
+  const amrTemplate = PRONOUNS_AMR.map(([p, e]) =>
+    `{"pronoun":"${p}","pronounEn":"${e}","form":"?","translit":"?"}`
+  ).join(',\n    ');
+
+  const userPrompt = `Conjugate the Arabic verb: "${v}"
+
+Replace every "?" with the correct Arabic form (full tashkeel) or its romanized transliteration. Return ONLY the completed JSON:
 
 {
-  "root": "the trilateral root letters, e.g. ح م د",
-  "verbForm": "the masdar wazn pattern, e.g. فَعَلَ – يَفْعَلُ",
-  "chapter": "the sarf chapter name, e.g. نَصَرَ – يَنْصُرُ (باب نصر)",
+  "root": "Arabic root letters e.g. ك ت ب",
+  "verbForm": "wazn e.g. فَعَلَ – يَفْعَلُ",
+  "chapter": "sarf chapter e.g. باب نَصَرَ",
   "type": "لازم or متعدٍّ",
-  "masdar": "verbal noun(s) with full tashkeel",
-  "ismFail": "اسم الفاعل with full tashkeel",
-  "ismMaful": "اسم المفعول with full tashkeel, or null if intransitive",
-  "ismMakan": "اسم المكان/الزمان with full tashkeel",
-  "meaning": "core English meaning, e.g. to praise / to extol",
+  "masdar": "?",
+  "ismFail": "?",
+  "ismMaful": "? or null",
+  "ismMakan": "?",
+  "meaning": "English meaning",
   "madi": [
-    {
-      "pronoun": "هُوَ",
-      "pronounEn": "he",
-      "maloom": "حَمِدَ",
-      "maloomTranslit": "ḥamida",
-      "majhool": "حُمِدَ",
-      "majhoolTranslit": "ḥumida"
-    }
+    ${madiTemplate}
   ],
   "mudari": [
-    {
-      "pronoun": "هُوَ",
-      "pronounEn": "he",
-      "marfu": "يَحْمَدُ",
-      "marfuTranslit": "yaḥmadu",
-      "mansub": "يَحْمَدَ",
-      "mansubTranslit": "yaḥmada",
-      "majzum": "يَحْمَدْ",
-      "majzumTranslit": "yaḥmad",
-      "muakkad": "يَحْمَدَنَّ",
-      "muakkadTranslit": "yaḥmadanna",
-      "maloomMajhool": "يُحْمَدُ",
-      "maloomMajhoolTranslit": "yuḥmadu"
-    }
+    ${mudariTemplate}
   ],
   "amr": [
-    {
-      "pronoun": "أَنْتَ",
-      "pronounEn": "you (m.s.)",
-      "form": "اِحْمَدْ",
-      "translit": "iḥmad"
-    }
+    ${amrTemplate}
   ],
   "ism": {
-    "fail": "حَامِدٌ",
-    "failTranslit": "ḥāmidun",
-    "maful": "مَحْمُودٌ",
-    "mafulTranslit": "maḥmūdun",
-    "makan": "مَحْمَدٌ",
-    "makanTranslit": "maḥmadun",
-    "masdar": "حَمْدٌ",
-    "masdarTranslit": "ḥamdun"
+    "fail":"?","failTranslit":"?","maful":"? or null","mafulTranslit":"? or null","makan":"?","makanTranslit":"?","masdar":"?","masdarTranslit":"?"
   }
-}
-
-The madi array MUST have exactly 13 rows for these pronouns in order:
-هُوَ، هُمَا (مذ)، هُمْ، هِيَ، هُمَا (مؤ)، هُنَّ، أَنْتَ، أَنْتِ، أَنْتُمَا، أَنْتُمْ، أَنْتُنَّ، أَنَا، نَحْنُ
-
-The mudari array MUST have exactly 13 rows in the same pronoun order.
-
-The amr array MUST have exactly 5 rows:
-أَنْتَ، أَنْتِ، أَنْتُمَا، أَنْتُمْ، أَنْتُنَّ
-
-For pronouns where amr does not apply (أنا، نحن، هو، هي، هم، هن، هما), do NOT include them in amr.
-
-Make the pronounEn field the English translation for each pronoun row.
-All Arabic MUST have complete tashkeel.`;
+}`;
 
   try {
     const completion = await groq.chat.completions.create({
@@ -98,7 +90,7 @@ All Arabic MUST have complete tashkeel.`;
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.05,
-      max_tokens: 4096,
+      max_tokens: 3000,
       response_format: { type: 'json_object' },
     });
 
@@ -114,7 +106,12 @@ All Arabic MUST have complete tashkeel.`;
     res.json(parsed);
   } catch (err: any) {
     req.log.error({ err }, 'Tasreef error');
-    res.status(500).json({ error: 'Failed to generate conjugation' });
+    const isRateLimit = err?.status === 429;
+    res.status(isRateLimit ? 429 : 500).json({
+      error: isRateLimit
+        ? 'Groq daily token limit reached. Please try again tomorrow or try a shorter verb.'
+        : 'Failed to generate conjugation',
+    });
   }
 });
 

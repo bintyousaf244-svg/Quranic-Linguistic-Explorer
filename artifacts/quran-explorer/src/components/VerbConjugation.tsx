@@ -100,8 +100,13 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
       if (data.error) throw new Error(data.error);
       setResult(data as TasreefResult);
       setActiveTab('maloom');
-    } catch {
-      setError('فشل في جلب التصريف. الرجاء المحاولة مجدداً.');
+    } catch (err: any) {
+      const msg = err?.message ?? '';
+      if (msg.includes('429') || msg.includes('rate') || msg.includes('limit')) {
+        setError('Daily AI limit reached. Please try again in a few hours.');
+      } else {
+        setError('فشل في جلب التصريف. الرجاء المحاولة مجدداً.');
+      }
     } finally {
       setIsLoading(false);
     }

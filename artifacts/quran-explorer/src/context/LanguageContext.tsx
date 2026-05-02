@@ -1,3 +1,4 @@
+// @refresh reset
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { strings, StringKey } from '../lib/i18n';
 
@@ -12,12 +13,14 @@ interface LangCtx {
 const LanguageContext = createContext<LangCtx>({
   lang: 'en',
   setLang: () => {},
-  t: (k) => k,
+  t: (k) => (strings.en as Record<string, string>)[k] ?? k,
 });
 
-export const useLanguage = () => useContext(LanguageContext);
+export function useLanguage() {
+  return useContext(LanguageContext);
+}
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
     try {
       const stored = localStorage.getItem('appLang');
@@ -43,4 +46,4 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       {children}
     </LanguageContext.Provider>
   );
-};
+}
