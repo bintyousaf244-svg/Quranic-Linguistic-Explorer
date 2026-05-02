@@ -19,9 +19,10 @@ interface SurahViewProps {
   bookmarks: Bookmark[];
   onToggleBookmark: (surahNumber: number, ayahNumber: number) => void;
   onWordSearch?: (word: string) => void;
+  onRootSearch?: (root: string) => void;
 }
 
-export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSaveNote, fontSize, scrollToAyah, bookmarks, onToggleBookmark, onWordSearch }) => {
+export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSaveNote, fontSize, scrollToAyah, bookmarks, onToggleBookmark, onWordSearch, onRootSearch }) => {
   const { lang, t } = useLanguage();
   const isUrdu = lang === 'ur';
 
@@ -321,6 +322,7 @@ export const SurahView: React.FC<SurahViewProps> = ({ surah, onBack, notes, onSa
               isBookmarked={bookmarks.some(b => b.surahNumber === surah.number && b.ayahNumber === ayah.numberInSurah)}
               onToggleBookmark={() => onToggleBookmark(surah.number, ayah.numberInSurah)}
               onWordSearch={onWordSearch}
+              onRootSearch={onRootSearch}
             />
           </div>
         ))}

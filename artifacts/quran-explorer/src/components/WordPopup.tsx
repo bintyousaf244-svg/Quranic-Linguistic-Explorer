@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { X, ExternalLink, Loader2 } from 'lucide-react';
+import { X, ExternalLink, Loader2, GitBranch } from 'lucide-react';
 
 export interface WordInfo {
   root?: string;
@@ -11,6 +11,13 @@ export interface WordInfo {
   source?: 'classical' | 'quran.com' | 'corpus+quran.com' | 'ai';
 }
 
+export interface RootFamilyMatch {
+  surahNumber: number;
+  surahEnglish: string;
+  ayahNumber: number;
+  text: string;
+}
+
 interface WordPopupProps {
   word: string;
   info: WordInfo | null;
@@ -18,10 +25,15 @@ interface WordPopupProps {
   position: { x: number; y: number };
   onClose: () => void;
   onOpenDictionary: (word: string) => void;
+  rootFamily?: RootFamilyMatch[];
+  rootFamilyCount?: number;
+  isRootFamilyLoading?: boolean;
+  onRootSearch?: (root: string) => void;
 }
 
 export const WordPopup: React.FC<WordPopupProps> = ({
   word, info, isLoading, position, onClose, onOpenDictionary,
+  rootFamily, rootFamilyCount, isRootFamilyLoading, onRootSearch,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -33,8 +45,10 @@ export const WordPopup: React.FC<WordPopupProps> = ({
     return () => document.removeEventListener('mousedown', handler);
   }, [onClose]);
 
-  const left = Math.min(Math.max(position.x - 140, 8), window.innerWidth - 292);
+  const left = Math.min(Math.max(position.x - 150, 8), window.innerWidth - 312);
   const isAbove = position.y > window.innerHeight * 0.55;
+
+  const hasRootFamily = info?.root && (isRootFamilyLoading || (rootFamily && rootFamily.length > 0));
 
   return (
     <div
@@ -45,7 +59,7 @@ export const WordPopup: React.FC<WordPopupProps> = ({
         top: isAbove ? position.y - 12 : position.y + 28,
         transform: isAbove ? 'translateY(-100%)' : 'none',
         zIndex: 9999,
-        width: '280px',
+        width: '300px',
         filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.18))',
       }}
     >
@@ -59,6 +73,7 @@ export const WordPopup: React.FC<WordPopupProps> = ({
       <div className="rounded-2xl border overflow-hidden"
         style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 15%, transparent)' }}>
 
+        {/* Header */}
         <div className="px-4 pt-4 pb-3 flex items-start justify-between gap-2"
           style={{ borderBottom: '1px solid color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
           <div className="flex flex-col gap-1 min-w-0">
@@ -92,6 +107,7 @@ export const WordPopup: React.FC<WordPopupProps> = ({
           </button>
         </div>
 
+        {/* Morphology body */}
         <div className="px-4 py-3">
           {isLoading ? (
             <div className="flex items-center justify-center py-4 gap-2">
@@ -155,6 +171,64 @@ export const WordPopup: React.FC<WordPopupProps> = ({
           ) : null}
         </div>
 
+        {/* Root Family section */}
+        {hasRootFamily && (
+          <div className="px-4 pb-3 pt-0">
+            <div className="rounded-xl overflow-hidden"
+              style={{ backgroundColor: 'color-mix(in srgb, var(--grove-green) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--grove-green) 15%, transparent)' }}>
+              <div className="px-3 py-2 flex items-center justify-between"
+                style={{ borderBottom: '1px solid color-mix(in srgb, var(--grove-green) 12%, transparent)' }}>
+                <div className="flex items-center gap-1.5">
+                  <GitBranch size={11} style={{ color: 'var(--grove-green)' }} />
+                  <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--grove-green)' }}>
+                    Root Family
+                  </span>
+                </div>
+                {rootFamilyCount != null && rootFamilyCount > 0 && (
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--grove-green) 15%, transparent)', color: 'var(--grove-green)' }}>
+                    {rootFamilyCount} verses
+                  </span>
+                )}
+              </div>
+
+              {isRootFamilyLoading ? (
+                <div className="flex items-center justify-center py-3 gap-1.5">
+                  <Loader2 className="animate-spin" size={12} style={{ color: 'var(--grove-green)' }} />
+                  <span className="text-[9px] opacity-50" style={{ color: 'var(--grove-green)' }}>Searching Quran…</span>
+                </div>
+              ) : rootFamily && rootFamily.length > 0 ? (
+                <div>
+                  {rootFamily.slice(0, 3).map((m, i) => (
+                    <div key={i}
+                      className="px-3 py-1.5 flex items-center justify-between gap-2"
+                      style={{ borderBottom: i < Math.min(rootFamily.length, 3) - 1 ? '1px solid color-mix(in srgb, var(--grove-green) 8%, transparent)' : 'none' }}>
+                      <span className="text-[9px] font-semibold opacity-60 shrink-0"
+                        style={{ color: 'var(--grove-purple)' }}>
+                        {m.surahEnglish} {m.surahNumber}:{m.ayahNumber}
+                      </span>
+                      <span className="text-[10px] text-right truncate opacity-70" dir="rtl"
+                        style={{ fontFamily: 'var(--font-arabic-var)', color: 'var(--grove-purple)', maxWidth: '140px' }}>
+                        {m.text}
+                      </span>
+                    </div>
+                  ))}
+                  {onRootSearch && info?.root && (
+                    <button
+                      onClick={() => { onRootSearch(info.root!.replace(/\s/g, '')); onClose(); }}
+                      className="w-full py-1.5 text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-1 transition-opacity hover:opacity-70"
+                      style={{ color: 'var(--grove-green)', borderTop: '1px solid color-mix(in srgb, var(--grove-green) 10%, transparent)' }}>
+                      <ExternalLink size={9} />
+                      See all {rootFamilyCount} occurrences
+                    </button>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
         <div className="px-4 pb-3">
           <button
             onClick={() => { onOpenDictionary(word); onClose(); }}

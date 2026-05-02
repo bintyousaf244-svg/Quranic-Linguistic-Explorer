@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Ayah, Note } from '../types';
 import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked, Play, Pause, Volume2, Bookmark } from 'lucide-react';
-import { WordPopup, WordInfo } from './WordPopup';
+import { WordPopup, WordInfo, RootFamilyMatch } from './WordPopup';
 import ReactMarkdown from 'react-markdown';
 import { streamAnalysis, fetchAuthenticGrammar } from '../services/analysisService';
 import { AnalysisCache } from '../services/cacheService';
@@ -25,12 +25,13 @@ interface AyahCardProps {
   isBookmarked?: boolean;
   onToggleBookmark?: () => void;
   onWordSearch?: (word: string) => void;
+  onRootSearch?: (root: string) => void;
 }
 
 export const AyahCard: React.FC<AyahCardProps> = ({
   ayah, surahName, surahNumber, note, onSaveNote, fontSize, highlighted,
   tafseerText, tafseerEdition, hasReciter, isPlaying, onPlay, onPause,
-  isBookmarked, onToggleBookmark, onWordSearch,
+  isBookmarked, onToggleBookmark, onWordSearch, onRootSearch,
 }) => {
   const { lang, t } = useLanguage();
 
@@ -51,14 +52,55 @@ export const AyahCard: React.FC<AyahCardProps> = ({
   const [wordInfo, setWordInfo] = useState<WordInfo | null>(null);
   const [wordPopupPos, setWordPopupPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isWordLoading, setIsWordLoading] = useState(false);
+  const [rootFamily, setRootFamily] = useState<RootFamilyMatch[]>([]);
+  const [rootFamilyCount, setRootFamilyCount] = useState<number | undefined>(undefined);
+  const [isRootFamilyLoading, setIsRootFamilyLoading] = useState(false);
 
   const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+  const fetchRootFamily = async (root: string) => {
+    const stripped = root.replace(/\s/g, '');
+    const cacheKey = `root_family_v1_${stripped}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setRootFamily(parsed.matches ?? []);
+        setRootFamilyCount(parsed.count);
+        return;
+      }
+    } catch { /* ignore */ }
+    setIsRootFamilyLoading(true);
+    try {
+      // For doubled roots (XYY pattern, e.g. ربب ضلل), the doubled letter appears
+      // with shadda in Quranic text, so substring-match for XYY fails — use XY instead.
+      let searchStr = stripped;
+      if (stripped.length === 3 && stripped[1] === stripped[2]) {
+        searchStr = stripped.slice(0, 2);
+      } else if (stripped.length === 3 && stripped[0] === stripped[1]) {
+        searchStr = stripped[0] + stripped[2];
+      }
+      const res = await fetch(`${BASE}/api/root-search?q=${encodeURIComponent(searchStr)}`);
+      if (!res.ok) return;
+      const data = await res.json() as { count: number; matches: RootFamilyMatch[] };
+      setRootFamily(data.matches ?? []);
+      setRootFamilyCount(data.count);
+      try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch { /* ignore */ }
+    } catch { /* silently skip */ } finally {
+      setIsRootFamilyLoading(false);
+    }
+  };
 
   const fetchWordInfo = async (word: string, wordIndex: number) => {
     const cacheKey = `word_popup_v4_${surahNumber}_${ayah.numberInSurah}_${wordIndex}`;
     try {
       const cached = localStorage.getItem(cacheKey);
-      if (cached) { setWordInfo(JSON.parse(cached)); return; }
+      if (cached) {
+        const parsed: WordInfo = JSON.parse(cached);
+        setWordInfo(parsed);
+        if (parsed.root) void fetchRootFamily(parsed.root);
+        return;
+      }
     } catch { /* ignore */ }
 
     setIsWordLoading(true);
@@ -72,6 +114,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
       const data: WordInfo = await res.json();
       setWordInfo(data);
       try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch { /* ignore */ }
+      if (data.root) void fetchRootFamily(data.root);
     } catch {
       setWordInfo({});
     } finally {
@@ -86,6 +129,8 @@ export const AyahCard: React.FC<AyahCardProps> = ({
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setActiveWord(word);
     setWordInfo(null);
+    setRootFamily([]);
+    setRootFamilyCount(undefined);
     setWordPopupPos({ x: rect.left + rect.width / 2, y: rect.top });
     fetchWordInfo(word, wordIndex);
   };
@@ -480,8 +525,12 @@ export const AyahCard: React.FC<AyahCardProps> = ({
           info={wordInfo}
           isLoading={isWordLoading}
           position={wordPopupPos}
-          onClose={() => setActiveWord(null)}
+          onClose={() => { setActiveWord(null); setRootFamily([]); setRootFamilyCount(undefined); }}
           onOpenDictionary={(w) => onWordSearch?.(w)}
+          rootFamily={rootFamily}
+          rootFamilyCount={rootFamilyCount}
+          isRootFamilyLoading={isRootFamilyLoading}
+          onRootSearch={onRootSearch}
         />
       )}
     </div>

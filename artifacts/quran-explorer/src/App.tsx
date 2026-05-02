@@ -342,6 +342,7 @@ function AppContent() {
           bookmarks={bookmarks}
           onToggleBookmark={handleToggleBookmark}
           onWordSearch={(word) => { setWordSearchInitial(word); setIsDictionaryOpen(true); }}
+          onRootSearch={(root) => { setRootSearchPreload(root); setIsRootSearchOpen(true); }}
         />
       ) : (
         <div className="space-y-12">
