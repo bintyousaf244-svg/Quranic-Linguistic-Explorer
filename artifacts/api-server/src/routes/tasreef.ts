@@ -1,23 +1,52 @@
 import { Router } from 'express';
-import Groq from 'groq-sdk';
 
 const router = Router();
 
-const GROQ_KEYS = [
-  process.env.GROQ_API_KEY,
-  process.env.GROQ_API_KEY_2,
-  process.env.GROQ_API_KEY_3,
-].filter(Boolean) as string[];
-
-let keyIndex = 0;
-function getGroqClient(): Groq {
-  return new Groq({ apiKey: GROQ_KEYS[keyIndex % GROQ_KEYS.length] });
+interface TasreefRow {
+  pronoun: string;
+  madiMaloom: string;
+  mudariMaloom: string;
+  mudariMajzum: string;
+  mudariMansub: string;
+  mudariMuakkad: string;
+  amr: string;
+  amrMuakkad: string;
+  madiMajhool: string;
+  mudariMajhool: string;
+  mudariMajhoolMajzum: string;
+  mudariMajhoolMansub: string;
 }
-function rotateKey(): void {
-  keyIndex = (keyIndex + 1) % GROQ_KEYS.length;
+
+function stripDiacritics(s: string): string {
+  return s.replace(/[\u064B-\u065F\u0670]/g, '');
 }
 
-const MODEL = 'llama-3.1-8b-instant';
+function parseQutrubResult(result: Record<string, Record<string, string>>): TasreefRow[] {
+  const rows: TasreefRow[] = [];
+  const keys = Object.keys(result)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .filter((k) => k > 0);
+
+  for (const k of keys) {
+    const row = result[String(k)];
+    rows.push({
+      pronoun: row['0'] ?? '',
+      madiMaloom: row['1'] ?? '',
+      mudariMaloom: row['2'] ?? '',
+      mudariMajzum: row['3'] ?? '',
+      mudariMansub: row['4'] ?? '',
+      mudariMuakkad: row['5'] ?? '',
+      amr: row['6'] ?? '',
+      amrMuakkad: row['7'] ?? '',
+      madiMajhool: row['8'] ?? '',
+      mudariMajhool: row['9'] ?? '',
+      mudariMajhoolMajzum: row['10'] ?? '',
+      mudariMajhoolMansub: row['11'] ?? '',
+    });
+  }
+  return rows;
+}
 
 router.post('/tasreef', async (req, res) => {
   const { verb } = req.body;
@@ -27,105 +56,40 @@ router.post('/tasreef', async (req, res) => {
     return;
   }
 
-  const v = verb.trim();
+  const bare = stripDiacritics(verb.trim());
 
-  const systemPrompt = `You are an expert in Arabic morphology (علم الصرف). Return ONLY valid JSON — no markdown, no prose. All Arabic must have complete tashkeel (harakat).`;
-
-  const PRONOUNS_MADI = [
-    ['هُوَ', 'he'],
-    ['هُمَا (مذ)', 'they two (m.)'],
-    ['هُمْ', 'they (m.)'],
-    ['هِيَ', 'she'],
-    ['هُمَا (مؤ)', 'they two (f.)'],
-    ['هُنَّ', 'they (f.)'],
-    ['أَنْتَ', 'you (m.s.)'],
-    ['أَنْتِ', 'you (f.s.)'],
-    ['أَنْتُمَا', 'you two'],
-    ['أَنْتُمْ', 'you (m.pl.)'],
-    ['أَنْتُنَّ', 'you (f.pl.)'],
-    ['أَنَا', 'I'],
-    ['نَحْنُ', 'we'],
-  ];
-
-  const PRONOUNS_AMR = [
-    ['أَنْتَ', 'you (m.s.)'],
-    ['أَنْتِ', 'you (f.s.)'],
-    ['أَنْتُمَا', 'you two'],
-    ['أَنْتُمْ', 'you (m.pl.)'],
-    ['أَنْتُنَّ', 'you (f.pl.)'],
-  ];
-
-  const madiTemplate = PRONOUNS_MADI.map(([p, e]) =>
-    `{"pronoun":"${p}","pronounEn":"${e}","maloom":"?","maloomTranslit":"?","majhool":"?","majhoolTranslit":"?"}`
-  ).join(',\n    ');
-
-  const mudariTemplate = PRONOUNS_MADI.map(([p, e]) =>
-    `{"pronoun":"${p}","pronounEn":"${e}","marfu":"?","marfuTranslit":"?","mansub":"?","mansubTranslit":"?","majzum":"?","majzumTranslit":"?","muakkad":"?","muakkadTranslit":"?","maloomMajhool":"?","maloomMajhoolTranslit":"?"}`
-  ).join(',\n    ');
-
-  const amrTemplate = PRONOUNS_AMR.map(([p, e]) =>
-    `{"pronoun":"${p}","pronounEn":"${e}","form":"?","translit":"?"}`
-  ).join(',\n    ');
-
-  const userPrompt = `Conjugate the Arabic verb: "${v}"
-
-Replace every "?" with the correct Arabic form (full tashkeel) or its romanized transliteration. Return ONLY the completed JSON:
-
-{
-  "root": "Arabic root letters e.g. ك ت ب",
-  "verbForm": "wazn e.g. فَعَلَ – يَفْعَلُ",
-  "chapter": "sarf chapter e.g. باب نَصَرَ",
-  "type": "لازم or متعدٍّ",
-  "masdar": "?",
-  "ismFail": "?",
-  "ismMaful": "? or null",
-  "ismMakan": "?",
-  "meaning": "English meaning",
-  "madi": [
-    ${madiTemplate}
-  ],
-  "mudari": [
-    ${mudariTemplate}
-  ],
-  "amr": [
-    ${amrTemplate}
-  ],
-  "ism": {
-    "fail":"?","failTranslit":"?","maful":"? or null","mafulTranslit":"? or null","makan":"?","makanTranslit":"?","masdar":"?","masdarTranslit":"?"
-  }
-}`;
-
-  const groq = getGroqClient();
   try {
-    const completion = await groq.chat.completions.create({
-      model: MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.05,
-      max_tokens: 3000,
-      response_format: { type: 'json_object' },
+    const url = `https://qutrub.arabeyes.org/api?verb=${encodeURIComponent(bare)}&output=json`;
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(10000),
     });
 
-    const raw = completion.choices[0]?.message?.content ?? '{}';
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      res.status(500).json({ error: 'Failed to parse conjugation data' });
+    if (!response.ok) {
+      req.log.warn({ status: response.status }, 'Qutrub API error');
+      res.status(502).json({ error: 'Conjugation service unavailable' });
       return;
     }
 
-    res.json(parsed);
-  } catch (err: any) {
-    req.log.error({ err }, 'Tasreef error');
-    const isRateLimit = err?.status === 429;
-    res.status(isRateLimit ? 429 : 500).json({
-      error: isRateLimit
-        ? 'Groq daily token limit reached. Please try again tomorrow or try a shorter verb.'
-        : 'Failed to generate conjugation',
+    const data = await response.json() as { result?: Record<string, Record<string, string>> };
+
+    if (!data.result || Object.keys(data.result).length <= 1) {
+      res.status(404).json({
+        error: 'Verb not found. Please enter the verb in its past tense (ماضي) form, e.g. كَتَبَ, ذَهَبَ, قَرَأَ',
+      });
+      return;
+    }
+
+    const rows = parseQutrubResult(data.result);
+
+    res.json({
+      verb: bare,
+      rows,
+      source: 'qutrub',
     });
+  } catch (err: any) {
+    req.log.error({ err }, 'Tasreef fetch error');
+    res.status(502).json({ error: 'Conjugation service unavailable. Please try again.' });
   }
 });
 
