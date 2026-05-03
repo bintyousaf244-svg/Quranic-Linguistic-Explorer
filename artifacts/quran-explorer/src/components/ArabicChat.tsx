@@ -103,6 +103,7 @@ function MessageBubble({
 }) {
   const isBot = msg.role === 'assistant';
   const parts = parseContent(msg.content);
+  const showTranslation = translationOpen;
   return (
     <div className={`flex gap-3 ${isBot ? 'justify-start' : 'justify-end'}`}>
       {isBot && (
@@ -131,19 +132,20 @@ function MessageBubble({
                 <div key={i} className="my-1.5 px-3 py-2 rounded-xl text-xs"
                   style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)', borderLeft: '3px solid var(--grove-gold)' }}>
                   <div dir="rtl" style={{ fontFamily: '"Amiri", serif' }}>✏️ {arabicOnly}</div>
-                  {translation && translationOpen && <div className="mt-1 opacity-80">{translation}</div>}
+                  {translation && showTranslation && <div className="mt-1 opacity-80">{translation}</div>}
                 </div>
               );
             }
             if (!part.content.trim()) return <br key={i} />;
-            const translation = extractTranslation(part.content);
             const arabicOnly = stripTranslation(part.content);
             return (
               <div key={i} className="mb-1 last:mb-0">
                 <div className="flex items-start gap-2">
                   <div className="flex-1">
                     {arabicOnly.trim() && <p dir="auto" style={{ marginBottom: 0 }}>{arabicOnly}</p>}
-                    {translation && translationOpen && <p className="text-[11px] opacity-70 mt-1">{translation}</p>}
+                    {showTranslation && part.content.includes('(') && extractTranslation(part.content) && (
+                      <p className="text-[11px] opacity-70 mt-1">{extractTranslation(part.content)}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -155,11 +157,11 @@ function MessageBubble({
             <button onClick={onToggleTranslation}
               className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all hover:opacity-80"
               style={{
-                backgroundColor: translationOpen ? 'color-mix(in srgb, var(--grove-gold) 16%, transparent)' : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
-                color: translationOpen ? 'var(--grove-gold)' : 'var(--grove-purple)',
+                backgroundColor: showTranslation ? 'color-mix(in srgb, var(--grove-gold) 16%, transparent)' : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
+                color: showTranslation ? 'var(--grove-gold)' : 'var(--grove-purple)',
               }}>
               <Languages size={10} />
-              {translationOpen ? 'Hide translation' : 'Translate'}
+              {showTranslation ? 'Hide translation' : 'Translate'}
             </button>
             <button onClick={onReplay}
               className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all hover:opacity-80"
