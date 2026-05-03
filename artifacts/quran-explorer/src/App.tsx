@@ -17,8 +17,9 @@ import { getAllBookmarks, addBookmark, removeBookmark, isBookmarked, replaceAllB
 import { NotesPanel } from './components/NotesPanel';
 import { BookmarksPanel } from './components/BookmarksPanel';
 import { WordOfDay } from './components/WordOfDay';
+import { ArabicChat } from './components/ArabicChat';
 import { Surah, Note, Bookmark } from './types';
-import { Loader2, BookOpen, Star, Languages, GitBranch, Sparkles, Clock, FileText, Bookmark as BookmarkIcon } from 'lucide-react';
+import { Loader2, BookOpen, Star, Languages, GitBranch, Sparkles, Clock, FileText, Bookmark as BookmarkIcon, MessageCircle } from 'lucide-react';
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
@@ -106,6 +107,7 @@ function AppContent() {
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
   const [wordSearchInitial, setWordSearchInitial] = useState<string | undefined>(undefined);
   const [isConjugationOpen, setIsConjugationOpen] = useState(false);
+  const [isArabicChatOpen, setIsArabicChatOpen] = useState(false);
   const [isRootSearchOpen, setIsRootSearchOpen] = useState(false);
   const [isThematicOpen, setIsThematicOpen] = useState(false);
   const [rootSearchPreload, setRootSearchPreload] = useState<string | null>(null);
@@ -287,6 +289,7 @@ function AppContent() {
     >
       {isDictionaryOpen && <WordSearch onClose={() => { setIsDictionaryOpen(false); setWordSearchInitial(undefined); }} initialWord={wordSearchInitial} />}
       {isConjugationOpen && <VerbConjugation onClose={() => setIsConjugationOpen(false)} />}
+      {isArabicChatOpen && <ArabicChat onClose={() => setIsArabicChatOpen(false)} />}
       {isRootSearchOpen && (
         <RootSearch
           onClose={() => { setIsRootSearchOpen(false); setRootSearchPreload(null); }}
@@ -363,12 +366,13 @@ function AppContent() {
           </div>
 
           {/* Feature Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
               { key: 'dict', icon: <Languages size={22} />, label: t('dict'), descEn: 'Word-by-word analysis', descUr: 'لفظ بلفظ تجزیہ', color: 'var(--grove-teal)', bg: 'color-mix(in srgb, var(--grove-teal) 10%, transparent)', onClick: () => setIsDictionaryOpen(true) },
               { key: 'tasreef', icon: <span style={{ fontFamily: '"Amiri", serif', fontSize: '22px', lineHeight: 1 }}>ص</span>, label: t('tasreef'), descEn: 'Verb conjugation table', descUr: 'فعل کی گردان', color: 'var(--grove-gold)', bg: 'color-mix(in srgb, var(--grove-gold) 10%, transparent)', onClick: () => setIsConjugationOpen(true) },
               { key: 'roots', icon: <GitBranch size={22} />, label: t('roots'), descEn: 'Search by Arabic root', descUr: 'عربی جذر سے تلاش', color: 'var(--grove-green)', bg: 'color-mix(in srgb, var(--grove-green) 10%, transparent)', onClick: () => setIsRootSearchOpen(true) },
               { key: 'themes', icon: <Sparkles size={22} />, label: t('themes'), descEn: 'AI thematic verse search', descUr: 'موضوعی آیات تلاش', color: 'var(--grove-purple)', bg: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)', onClick: () => setIsThematicOpen(true) },
+              { key: 'chat', icon: <MessageCircle size={22} />, label: isUrdu ? 'عربی بات چیت' : 'Arabic Tutor', descEn: 'Practice spoken Arabic', descUr: 'عربی گفتگو کی مشق', color: '#C2653A', bg: 'color-mix(in srgb, #C2653A 10%, transparent)', onClick: () => setIsArabicChatOpen(true) },
             ].map(({ key, icon, label, descEn, descUr, color, bg, onClick }) => (
               <button key={key} onClick={onClick}
                 className="flex flex-col items-start gap-3 p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:shadow-md"

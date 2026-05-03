@@ -9,6 +9,7 @@ import notesRouter from "./notes";
 import bookmarksRouter from "./bookmarks";
 import tafseerProxyRouter from "./tafseerProxy";
 import wordLookupRouter from "./wordLookup";
+import arabicChatRouter from "./arabicChat";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(notesRouter);
 router.use(bookmarksRouter);
 router.use(tafseerProxyRouter);
 router.use(wordLookupRouter);
+router.use(arabicChatRouter);
 
 export default router;
