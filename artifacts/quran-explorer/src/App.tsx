@@ -16,6 +16,7 @@ import { getAllNotes, saveNote, deleteNote } from './services/notesService';
 import { getAllBookmarks, addBookmark, removeBookmark, isBookmarked, replaceAllBookmarks } from './services/bookmarkService';
 import { NotesPanel } from './components/NotesPanel';
 import { BookmarksPanel } from './components/BookmarksPanel';
+import { WordOfDay } from './components/WordOfDay';
 import { Surah, Note, Bookmark } from './types';
 import { Loader2, BookOpen, Star, Languages, GitBranch, Sparkles, Clock, FileText, Bookmark as BookmarkIcon } from 'lucide-react';
 
@@ -384,6 +385,18 @@ function AppContent() {
               </button>
             ))}
           </div>
+
+          {/* Word of the Day */}
+          <WordOfDay
+            onNavigate={(surah, ayah) => {
+              const s = surahs.find(x => x.number === surah);
+              if (!s) return;
+              setTargetAyah(ayah);
+              pushRecent(s.number);
+              setRecentNums(getRecentNums());
+              setSelectedSurah(s);
+            }}
+          />
 
           {/* My Bookmarks shortcut */}
           {bookmarks.length > 0 && (
