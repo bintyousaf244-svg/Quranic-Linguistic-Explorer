@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Loader2, MessageCircle, RotateCcw, Bot } from 'lucide-react';
+import { X, Send, Loader2, RotateCcw, Volume2, VolumeX, Mic, MicOff, Play } from 'lucide-react';
 
 interface ArabicChatProps {
   onClose: () => void;
@@ -26,13 +26,49 @@ const WELCOME: Message = {
 
 هل تريد أن أقترح لك مواضيع للمحادثة؟ أم لديك موضوع في ذهنك؟
 
-(Hello! I'm your Arabic tutor. I can practice conversation with you, correct your mistakes gently, and suggest topics. What would you like to do?)`,
+(Hello! I'm your Arabic tutor. I can practice conversation with you, correct mistakes, and suggest topics.)`,
 };
+
+function cleanForSpeech(text: string): string {
+  return text
+    .split('\n')
+    .filter(line => !line.trim().startsWith('✏️'))
+    .join(' ')
+    .replace(/\([^)]*[a-zA-Z][^)]*\)/g, '')
+    .replace(/[🌟•·]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getArabicVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  return (
+    voices.find(v => v.lang === 'ar-SA') ??
+    voices.find(v => v.lang === 'ar-EG') ??
+    voices.find(v => v.lang.startsWith('ar')) ??
+    null
+  );
+}
+
+function speak(text: string, onStart?: () => void, onEnd?: () => void) {
+  window.speechSynthesis.cancel();
+  const cleaned = cleanForSpeech(text);
+  if (!cleaned) return;
+  const utt = new SpeechSynthesisUtterance(cleaned);
+  utt.lang = 'ar-SA';
+  utt.rate = 0.88;
+  utt.pitch = 1;
+  const voice = getArabicVoice();
+  if (voice) utt.voice = voice;
+  utt.onstart = () => onStart?.();
+  utt.onend = () => onEnd?.();
+  utt.onerror = () => onEnd?.();
+  window.speechSynthesis.speak(utt);
+}
 
 function parseContent(text: string) {
   const parts: { type: 'correction' | 'text'; content: string }[] = [];
-  const lines = text.split('\n');
-  for (const line of lines) {
+  for (const line of text.split('\n')) {
     if (line.startsWith('✏️')) {
       parts.push({ type: 'correction', content: line.replace('✏️', '').trim() });
     } else {
@@ -42,7 +78,17 @@ function parseContent(text: string) {
   return parts;
 }
 
-function MessageBubble({ msg }: { msg: Message }) {
+function MessageBubble({
+  msg,
+  isSpeaking,
+  voiceOn,
+  onReplay,
+}: {
+  msg: Message;
+  isSpeaking: boolean;
+  voiceOn: boolean;
+  onReplay: () => void;
+}) {
   const isBot = msg.role === 'assistant';
   const parts = parseContent(msg.content);
 
@@ -50,37 +96,61 @@ function MessageBubble({ msg }: { msg: Message }) {
     <div className={`flex gap-3 ${isBot ? 'justify-start' : 'justify-end'}`}>
       {isBot && (
         <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 text-white text-sm shadow"
-          style={{ backgroundColor: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>
-          أ
+          style={{ backgroundColor: isSpeaking ? '#C2653A' : 'var(--grove-purple)', fontFamily: '"Amiri", serif', transition: 'background-color 0.3s' }}>
+          {isSpeaking
+            ? <span className="flex gap-0.5 items-end h-4">{[0,1,2].map(i => (
+                <span key={i} className="w-0.5 rounded-full bg-white animate-bounce"
+                  style={{ height: `${8 + i * 3}px`, animationDelay: `${i * 0.12}s` }} />
+              ))}</span>
+            : 'أ'}
         </div>
       )}
-      <div
-        className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${isBot ? 'rounded-tl-sm' : 'rounded-tr-sm'}`}
-        style={{
-          backgroundColor: isBot
-            ? 'var(--grove-paper)'
-            : 'var(--grove-purple)',
-          color: isBot ? 'var(--grove-purple)' : 'white',
-          border: isBot ? '1px solid color-mix(in srgb, var(--grove-purple) 10%, transparent)' : 'none',
-        }}
-      >
-        {parts.map((part, i) => {
-          if (part.type === 'correction') {
+
+      <div className="flex flex-col gap-1 max-w-[82%]">
+        <div
+          className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${isBot ? 'rounded-tl-sm' : 'rounded-tr-sm'}`}
+          style={{
+            backgroundColor: isBot ? 'var(--grove-paper)' : 'var(--grove-purple)',
+            color: isBot ? 'var(--grove-purple)' : 'white',
+            border: isBot ? '1px solid color-mix(in srgb, var(--grove-purple) 10%, transparent)' : 'none',
+          }}
+        >
+          {parts.map((part, i) => {
+            if (part.type === 'correction') {
+              return (
+                <div key={i} className="my-1.5 px-3 py-2 rounded-xl text-xs"
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)', borderLeft: '3px solid var(--grove-gold)' }}>
+                  ✏️ {part.content}
+                </div>
+              );
+            }
+            if (!part.content.trim()) return <br key={i} />;
             return (
-              <div key={i} className="my-1.5 px-3 py-2 rounded-xl text-xs"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)', borderLeft: '3px solid var(--grove-gold)' }}>
-                ✏️ {part.content}
-              </div>
+              <p key={i} dir="auto" style={{ marginBottom: i < parts.length - 1 ? '4px' : 0 }}>
+                {part.content}
+              </p>
             );
-          }
-          if (!part.content.trim()) return <br key={i} />;
-          return (
-            <p key={i} dir="auto" style={{ marginBottom: i < parts.length - 1 ? '4px' : 0 }}>
-              {part.content}
-            </p>
-          );
-        })}
+          })}
+        </div>
+
+        {isBot && voiceOn && (
+          <button
+            onClick={onReplay}
+            title="Replay audio"
+            className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all hover:opacity-80"
+            style={{
+              backgroundColor: isSpeaking
+                ? 'color-mix(in srgb, #C2653A 12%, transparent)'
+                : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
+              color: isSpeaking ? '#C2653A' : 'var(--grove-purple)',
+            }}
+          >
+            <Play size={10} />
+            {isSpeaking ? 'يتكلم...' : 'إعادة'}
+          </button>
+        )}
       </div>
+
       {!isBot && (
         <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 text-white text-xs font-bold shadow"
           style={{ backgroundColor: 'var(--grove-teal)' }}>
@@ -91,20 +161,52 @@ function MessageBubble({ msg }: { msg: Message }) {
   );
 }
 
+const SpeechRecognitionAPI =
+  (window as unknown as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition ??
+  (window as unknown as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition ??
+  null;
+
 export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [voiceOn, setVoiceOn] = useState(true);
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [micError, setMicError] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<InstanceType<typeof SpeechRecognition> | null>(null);
+
+  useEffect(() => {
+    const onVoices = () => {};
+    window.speechSynthesis.addEventListener('voiceschanged', onVoices);
+    return () => {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.removeEventListener('voiceschanged', onVoices);
+    };
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const speakMessage = useCallback((msg: Message) => {
+    if (!voiceOn) return;
+    setSpeakingId(msg.id);
+    speak(
+      msg.content,
+      () => setSpeakingId(msg.id),
+      () => setSpeakingId(null),
+    );
+  }, [voiceOn]);
+
   const sendMessage = useCallback(async (text?: string) => {
     const content = (text ?? input).trim();
     if (!content || isLoading) return;
+
+    window.speechSynthesis.cancel();
+    setSpeakingId(null);
 
     const userMsg: Message = { role: 'user', content, id: Date.now().toString() };
     const newMessages = [...messages, userMsg];
@@ -130,6 +232,10 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
         id: Date.now().toString() + '_bot',
       };
       setMessages(prev => [...prev, botMsg]);
+      if (voiceOn) {
+        setSpeakingId(botMsg.id);
+        speak(botMsg.content, () => setSpeakingId(botMsg.id), () => setSpeakingId(null));
+      }
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -140,7 +246,52 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
       setIsLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [input, messages, isLoading]);
+  }, [input, messages, isLoading, voiceOn]);
+
+  const toggleVoice = () => {
+    if (voiceOn) {
+      window.speechSynthesis.cancel();
+      setSpeakingId(null);
+    }
+    setVoiceOn(v => !v);
+  };
+
+  const toggleMic = () => {
+    if (!SpeechRecognitionAPI) {
+      setMicError('Microphone not supported in this browser. Try Chrome.');
+      setTimeout(() => setMicError(''), 3000);
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    setMicError('');
+    const rec = new SpeechRecognitionAPI();
+    rec.lang = 'ar-SA';
+    rec.continuous = false;
+    rec.interimResults = true;
+
+    rec.onstart = () => setIsListening(true);
+    rec.onresult = (e: SpeechRecognitionEvent) => {
+      const transcript = Array.from(e.results)
+        .map((r: SpeechRecognitionResult) => r[0].transcript)
+        .join('');
+      setInput(transcript);
+    };
+    rec.onend = () => {
+      setIsListening(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    };
+    rec.onerror = () => {
+      setIsListening(false);
+      setMicError('Could not hear you. Please try again.');
+      setTimeout(() => setMicError(''), 3000);
+    };
+    recognitionRef.current = rec;
+    rec.start();
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -150,6 +301,8 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
   };
 
   const handleReset = () => {
+    window.speechSynthesis.cancel();
+    setSpeakingId(null);
     setMessages([WELCOME]);
     setInput('');
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -177,18 +330,39 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
           style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg text-lg"
-              style={{ backgroundColor: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>
-              أ
+              style={{ backgroundColor: speakingId ? '#C2653A' : 'var(--grove-purple)', fontFamily: '"Amiri", serif', transition: 'background-color 0.3s' }}>
+              {speakingId
+                ? <span className="flex gap-0.5 items-end h-5">{[0,1,2].map(i => (
+                    <span key={i} className="w-0.5 rounded-full bg-white animate-bounce"
+                      style={{ height: `${8 + i * 4}px`, animationDelay: `${i * 0.12}s` }} />
+                  ))}</span>
+                : 'أ'}
             </div>
             <div>
               <h2 className="text-base font-bold" style={{ color: 'var(--grove-purple)' }}>أستاذ · Arabic Tutor</h2>
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <p className="text-xs opacity-55" style={{ color: 'var(--grove-purple)' }}>AI-powered conversation practice</p>
+                <p className="text-xs opacity-55" style={{ color: 'var(--grove-purple)' }}>
+                  {speakingId ? 'Speaking in Arabic...' : 'AI-powered conversation practice'}
+                </p>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggleVoice}
+              title={voiceOn ? 'Mute voice' : 'Enable voice'}
+              className="p-2 rounded-full transition-all hover:opacity-70 flex items-center gap-1.5 text-xs font-medium px-3"
+              style={{
+                backgroundColor: voiceOn
+                  ? 'color-mix(in srgb, #C2653A 10%, transparent)'
+                  : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
+                color: voiceOn ? '#C2653A' : 'var(--grove-purple)',
+              }}
+            >
+              {voiceOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
+              <span>{voiceOn ? 'Voice On' : 'Voice Off'}</span>
+            </button>
             <button onClick={handleReset} title="Reset conversation"
               className="p-2 rounded-full transition-all hover:opacity-70"
               style={{ color: 'var(--grove-purple)' }}>
@@ -205,7 +379,13 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {messages.map(msg => (
-            <MessageBubble key={msg.id} msg={msg} />
+            <MessageBubble
+              key={msg.id}
+              msg={msg}
+              isSpeaking={speakingId === msg.id}
+              voiceOn={voiceOn}
+              onReplay={() => speakMessage(msg)}
+            />
           ))}
           {isLoading && (
             <div className="flex gap-3 justify-start">
@@ -223,7 +403,7 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
           <div ref={bottomRef} />
         </div>
 
-        {/* Quick starters — only show at start */}
+        {/* Quick starters */}
         {messages.length === 1 && (
           <div className="px-5 pb-3 flex gap-2 flex-wrap shrink-0">
             {QUICK_STARTERS.map(s => (
@@ -244,26 +424,50 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
         {/* Input */}
         <div className="px-4 pb-4 pt-2 shrink-0 border-t"
           style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
+          {micError && (
+            <p className="text-xs text-center mb-2 opacity-70" style={{ color: '#C2653A' }}>{micError}</p>
+          )}
           <div className="flex gap-2 items-end">
+            {/* Mic button */}
+            <button
+              onClick={toggleMic}
+              title={isListening ? 'Stop listening' : 'Speak in Arabic'}
+              className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-md shrink-0"
+              style={{
+                backgroundColor: isListening
+                  ? '#C2653A'
+                  : 'color-mix(in srgb, var(--grove-purple) 8%, transparent)',
+                color: isListening ? 'white' : 'var(--grove-purple)',
+                border: isListening ? 'none' : '1px solid color-mix(in srgb, var(--grove-purple) 15%, transparent)',
+              }}
+            >
+              {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+            </button>
+
             <textarea
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="اكتب بالعربية أو بالإنجليزية... (Press Enter to send)"
+              placeholder={isListening ? '🎙️ Listening... speak in Arabic' : 'اكتب بالعربية أو بالإنجليزية... (Enter to send)'}
               rows={2}
               dir="auto"
               className="flex-1 resize-none rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 transition-all"
               style={{
-                backgroundColor: 'var(--grove-cream)',
+                backgroundColor: isListening
+                  ? 'color-mix(in srgb, #C2653A 5%, transparent)'
+                  : 'var(--grove-cream)',
                 color: 'var(--grove-purple)',
-                border: '1px solid color-mix(in srgb, var(--grove-purple) 12%, transparent)',
+                border: isListening
+                  ? '1px solid color-mix(in srgb, #C2653A 30%, transparent)'
+                  : '1px solid color-mix(in srgb, var(--grove-purple) 12%, transparent)',
                 fontFamily: '"Amiri", serif',
                 fontSize: '1rem',
                 lineHeight: '1.5',
+                transition: 'all 0.2s',
               }}
-              autoFocus
             />
+
             <button
               onClick={() => sendMessage()}
               disabled={isLoading || !input.trim()}
@@ -274,7 +478,7 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
             </button>
           </div>
           <p className="text-[10px] opacity-30 mt-1.5 text-center" style={{ color: 'var(--grove-purple)' }}>
-            Shift+Enter for new line · Enter to send
+            🎙️ Tap mic to speak · Enter to send · {voiceOn ? 'Bot will speak responses' : 'Voice is muted'}
           </p>
         </div>
       </div>
