@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Loader2, RotateCcw, Volume2, VolumeX, Mic, MicOff, Play, ExternalLink } from 'lucide-react';
+import { X, Send, Loader2, RotateCcw, Volume2, VolumeX, Mic, MicOff, Play } from 'lucide-react';
 
 interface ArabicChatProps {
   onClose: () => void;
@@ -40,62 +40,21 @@ function cleanForSpeech(text: string): string {
     .trim();
 }
 
-function loadVoices(): Promise<SpeechSynthesisVoice[]> {
-  return new Promise(resolve => {
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) { resolve(voices); return; }
-    const cb = () => resolve(window.speechSynthesis.getVoices());
-    window.speechSynthesis.addEventListener('voiceschanged', cb, { once: true });
-    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1500);
-  });
-}
-
-async function pickVoice(): Promise<SpeechSynthesisVoice | null> {
-  const voices = await loadVoices();
-  return (
-    voices.find(v => v.lang === 'ar-SA') ??
-    voices.find(v => v.lang === 'ar-EG') ??
-    voices.find(v => v.lang.startsWith('ar')) ??
-    voices.find(v => v.default) ??
-    voices[0] ??
-    null
-  );
-}
-
-function doSpeak(
-  text: string,
-  voice: SpeechSynthesisVoice | null,
-  onStart: () => void,
-  onEnd: () => void,
-) {
-  const synth = window.speechSynthesis;
-  synth.cancel();
-
-  const cleaned = cleanForSpeech(text);
-  if (!cleaned) { onEnd(); return; }
-
-  setTimeout(() => {
-    synth.resume();
-    const utt = new SpeechSynthesisUtterance(cleaned);
-    utt.lang = 'ar-SA';
-    utt.rate = 0.85;
-    utt.pitch = 1;
-    if (voice) utt.voice = voice;
-
-    utt.onstart = onStart;
-    utt.onend = onEnd;
-    utt.onerror = () => onEnd();
-
-    synth.speak(utt);
-
-    const keepAlive = setInterval(() => {
-      if (!synth.speaking) { clearInterval(keepAlive); return; }
-      synth.pause();
-      synth.resume();
-    }, 8000);
-    utt.onend = () => { clearInterval(keepAlive); onEnd(); };
-    utt.onerror = () => { clearInterval(keepAlive); onEnd(); };
-  }, 80);
+function chunkArabic(text: string, maxLen = 180): string[] {
+  const chunks: string[] = [];
+  const sentences = text.split(/(?<=[.!?؟\n،])\s*/g);
+  let current = '';
+  for (const s of sentences) {
+    if (!s.trim()) continue;
+    if ((current + ' ' + s).length > maxLen && current) {
+      chunks.push(current.trim());
+      current = s;
+    } else {
+      current = current ? current + ' ' + s : s;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks.filter(c => c.trim().length > 1);
 }
 
 function parseContent(text: string) {
@@ -175,7 +134,7 @@ function MessageBubble({
           })}
         </div>
 
-        {isBot && voiceOn && (
+        {isBot && (
           <button
             onClick={onReplay}
             title="Replay audio"
@@ -183,8 +142,11 @@ function MessageBubble({
             style={{
               backgroundColor: isSpeaking
                 ? 'color-mix(in srgb, #C2653A 12%, transparent)'
-                : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
+                : voiceOn
+                  ? 'color-mix(in srgb, var(--grove-purple) 7%, transparent)'
+                  : 'transparent',
               color: isSpeaking ? '#C2653A' : 'var(--grove-purple)',
+              opacity: voiceOn ? 1 : 0.4,
             }}
           >
             <Play size={10} />
@@ -216,66 +178,55 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [micError, setMicError] = useState('');
-  const [ttsBlocked, setTtsBlocked] = useState(false);
-  const [voiceReady, setVoiceReady] = useState(false);
 
-  const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<InstanceType<typeof SpeechRecognition> | null>(null);
-  const pendingSpeakRef = useRef<{ content: string; id: string } | null>(null);
 
   useEffect(() => {
-    if (!window.speechSynthesis) {
-      setTtsBlocked(true);
-      return;
-    }
-    pickVoice().then(v => {
-      voiceRef.current = v;
-      setVoiceReady(true);
-      if (pendingSpeakRef.current) {
-        const { content, id } = pendingSpeakRef.current;
-        pendingSpeakRef.current = null;
-        setSpeakingId(id);
-        doSpeak(content, v, () => setSpeakingId(id), () => setSpeakingId(null));
-      }
-    });
-    return () => { window.speechSynthesis.cancel(); };
+    return () => { stopAudio(); };
   }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const speakMessage = useCallback((msg: Message) => {
-    if (!voiceOn || !window.speechSynthesis) return;
-    setSpeakingId(msg.id);
-    doSpeak(
-      msg.content,
-      voiceRef.current,
-      () => setSpeakingId(msg.id),
-      () => setSpeakingId(null),
-    );
-  }, [voiceOn]);
-
-  const testVoice = () => {
-    if (!window.speechSynthesis) { setTtsBlocked(true); return; }
-    setSpeakingId('test');
-    doSpeak(
-      'مرحباً، هذا اختبار الصوت. أنا أتكلم العربية.',
-      voiceRef.current,
-      () => setSpeakingId('test'),
-      () => setSpeakingId(null),
-    );
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current = null;
+    }
+    setSpeakingId(null);
   };
+
+  const playChunks = useCallback((chunks: string[], msgId: string, idx = 0) => {
+    if (idx >= chunks.length) { setSpeakingId(null); return; }
+    const url = `${BASE}/api/tts?text=${encodeURIComponent(chunks[idx])}`;
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    setSpeakingId(msgId);
+    audio.onended = () => playChunks(chunks, msgId, idx + 1);
+    audio.onerror = () => playChunks(chunks, msgId, idx + 1);
+    audio.play().catch(() => playChunks(chunks, msgId, idx + 1));
+  }, []);
+
+  const speakText = useCallback((text: string, msgId: string) => {
+    stopAudio();
+    const cleaned = cleanForSpeech(text);
+    if (!cleaned) return;
+    const chunks = chunkArabic(cleaned);
+    if (chunks.length === 0) return;
+    playChunks(chunks, msgId);
+  }, [playChunks]);
 
   const sendMessage = useCallback(async (text?: string) => {
     const content = (text ?? input).trim();
     if (!content || isLoading) return;
 
-    window.speechSynthesis?.cancel();
-    setSpeakingId(null);
-
+    stopAudio();
     const userMsg: Message = { role: 'user', content, id: Date.now().toString() };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
@@ -301,15 +252,7 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
         id: Date.now().toString() + '_bot',
       };
       setMessages(prev => [...prev, botMsg]);
-
-      if (voiceOn && window.speechSynthesis) {
-        if (voiceReady) {
-          setSpeakingId(botMsg.id);
-          doSpeak(botMsg.content, voiceRef.current, () => setSpeakingId(botMsg.id), () => setSpeakingId(null));
-        } else {
-          pendingSpeakRef.current = { content: botMsg.content, id: botMsg.id };
-        }
-      }
+      if (voiceOn) speakText(botMsg.content, botMsg.id);
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -320,16 +263,16 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
       setIsLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [input, messages, isLoading, voiceOn, voiceReady]);
+  }, [input, messages, isLoading, voiceOn, speakText]);
 
   const toggleVoice = () => {
-    if (voiceOn) { window.speechSynthesis?.cancel(); setSpeakingId(null); }
+    if (voiceOn) stopAudio();
     setVoiceOn(v => !v);
   };
 
   const toggleMic = () => {
     if (!SpeechRecognitionAPI) {
-      setMicError('Microphone not supported in this browser. Try Chrome.');
+      setMicError('Microphone not supported here. Try Chrome or Edge.');
       setTimeout(() => setMicError(''), 3000);
       return;
     }
@@ -359,8 +302,7 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
   };
 
   const handleReset = () => {
-    window.speechSynthesis?.cancel();
-    setSpeakingId(null);
+    stopAudio();
     setMessages([WELCOME]);
     setInput('');
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -387,10 +329,11 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
         <div className="px-5 py-4 border-b flex items-center justify-between shrink-0"
           style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg text-lg"
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg"
               style={{
                 backgroundColor: speakingId ? '#C2653A' : 'var(--grove-purple)',
                 fontFamily: '"Amiri", serif',
+                fontSize: '1.2rem',
                 transition: 'background-color 0.3s',
               }}>
               {speakingId
@@ -405,72 +348,36 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 <p className="text-xs opacity-55" style={{ color: 'var(--grove-purple)' }}>
-                  {speakingId ? 'Speaking Arabic...' : 'AI-powered conversation practice'}
+                  {speakingId ? 'Speaking Arabic...' : 'AI conversation practice'}
                 </p>
               </div>
             </div>
           </div>
+
           <div className="flex items-center gap-1">
-            {/* Voice toggle */}
-            <button
-              onClick={toggleVoice}
-              title={voiceOn ? 'Mute voice' : 'Enable voice'}
+            <button onClick={toggleVoice}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-all hover:opacity-80"
               style={{
                 backgroundColor: voiceOn
-                  ? 'color-mix(in srgb, #C2653A 10%, transparent)'
+                  ? 'color-mix(in srgb, #C2653A 12%, transparent)'
                   : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
                 color: voiceOn ? '#C2653A' : 'var(--grove-purple)',
-              }}
-            >
-              {voiceOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
-              <span>{voiceOn ? 'Voice On' : 'Muted'}</span>
+              }}>
+              {voiceOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+              {voiceOn ? 'Voice On' : 'Muted'}
             </button>
-            {/* Test voice button */}
-            {voiceOn && !ttsBlocked && (
-              <button
-                onClick={testVoice}
-                title="Test Arabic voice"
-                className="p-2 rounded-full transition-all hover:opacity-70"
-                style={{ color: 'var(--grove-purple)' }}
-              >
-                <Play size={16} />
-              </button>
-            )}
-            <button onClick={handleReset} title="Reset" className="p-2 rounded-full transition-all hover:opacity-70"
+            <button onClick={handleReset} title="New conversation"
+              className="p-2 rounded-full transition-all hover:opacity-70"
               style={{ color: 'var(--grove-purple)' }}>
               <RotateCcw size={17} />
             </button>
-            <button onClick={onClose} className="p-2 rounded-full transition-all hover:opacity-70"
+            <button onClick={onClose}
+              className="p-2 rounded-full transition-all hover:opacity-70"
               style={{ color: 'var(--grove-purple)' }}>
               <X size={20} />
             </button>
           </div>
         </div>
-
-        {/* TTS blocked notice */}
-        {ttsBlocked && (
-          <div className="px-5 py-3 flex items-center justify-between gap-3 shrink-0 text-xs"
-            style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 8%, transparent)', color: 'var(--grove-gold)' }}>
-            <span>🔇 Voice is blocked in the preview iframe. Open the app in a full browser tab to hear the bot.</span>
-            <a
-              href={window.location.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 font-bold underline whitespace-nowrap"
-            >
-              Open <ExternalLink size={11} />
-            </a>
-          </div>
-        )}
-
-        {/* Browser TTS tip for iframe */}
-        {!ttsBlocked && voiceOn && (
-          <div className="px-5 py-2 text-[10px] text-center opacity-50 shrink-0"
-            style={{ color: 'var(--grove-purple)', backgroundColor: 'color-mix(in srgb, var(--grove-purple) 2%, transparent)' }}>
-            ▶ Tap the play button in the header to test voice · If no sound, open this page in a new browser tab
-          </div>
-        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
@@ -479,16 +386,17 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
               key={msg.id}
               msg={msg}
               isSpeaking={speakingId === msg.id}
-              voiceOn={voiceOn && !ttsBlocked}
-              onReplay={() => speakMessage(msg)}
+              voiceOn={voiceOn}
+              onReplay={() => {
+                if (speakingId === msg.id) { stopAudio(); }
+                else if (voiceOn) { speakText(msg.content, msg.id); }
+              }}
             />
           ))}
           {isLoading && (
             <div className="flex gap-3 justify-start">
               <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-sm shadow"
-                style={{ backgroundColor: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>
-                أ
-              </div>
+                style={{ backgroundColor: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>أ</div>
               <div className="flex items-center gap-2 px-4 py-3 rounded-2xl rounded-tl-sm border shadow-sm"
                 style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)' }}>
                 <Loader2 size={14} className="animate-spin" style={{ color: 'var(--grove-purple)', opacity: 0.5 }} />
@@ -521,19 +429,17 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
         <div className="px-4 pb-4 pt-2 shrink-0 border-t"
           style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
           {micError && (
-            <p className="text-xs text-center mb-2 opacity-70" style={{ color: '#C2653A' }}>{micError}</p>
+            <p className="text-xs text-center mb-2" style={{ color: '#C2653A' }}>{micError}</p>
           )}
           <div className="flex gap-2 items-end">
-            <button
-              onClick={toggleMic}
-              title={isListening ? 'Stop listening' : 'Speak in Arabic'}
-              className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-md shrink-0"
+            <button onClick={toggleMic}
+              title={isListening ? 'Stop' : 'Speak in Arabic'}
+              className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-sm shrink-0"
               style={{
                 backgroundColor: isListening ? '#C2653A' : 'color-mix(in srgb, var(--grove-purple) 8%, transparent)',
                 color: isListening ? 'white' : 'var(--grove-purple)',
                 border: isListening ? 'none' : '1px solid color-mix(in srgb, var(--grove-purple) 15%, transparent)',
-              }}
-            >
+              }}>
               {isListening ? <MicOff size={16} /> : <Mic size={16} />}
             </button>
 
@@ -542,7 +448,7 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? '🎙️ Listening... speak in Arabic' : 'اكتب بالعربية أو بالإنجليزية... (Enter to send)'}
+              placeholder={isListening ? '🎙️ Listening... speak in Arabic' : 'اكتب بالعربية أو بالإنجليزية...'}
               rows={2}
               dir="auto"
               className="flex-1 resize-none rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 transition-all"
@@ -560,17 +466,15 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
               autoFocus
             />
 
-            <button
-              onClick={() => sendMessage()}
+            <button onClick={() => sendMessage()}
               disabled={isLoading || !input.trim()}
               className="w-11 h-11 rounded-2xl flex items-center justify-center text-white transition-all disabled:opacity-40 shadow-md shrink-0"
-              style={{ backgroundColor: 'var(--grove-purple)' }}
-            >
+              style={{ backgroundColor: 'var(--grove-purple)' }}>
               <Send size={16} />
             </button>
           </div>
           <p className="text-[10px] opacity-30 mt-1.5 text-center" style={{ color: 'var(--grove-purple)' }}>
-            🎙️ Tap mic to speak Arabic · Enter to send
+            Enter to send · 🎙️ mic to speak · voice powered by Google Translate
           </p>
         </div>
       </div>

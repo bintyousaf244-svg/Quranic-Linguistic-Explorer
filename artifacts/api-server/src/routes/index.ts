@@ -10,6 +10,7 @@ import bookmarksRouter from "./bookmarks";
 import tafseerProxyRouter from "./tafseerProxy";
 import wordLookupRouter from "./wordLookup";
 import arabicChatRouter from "./arabicChat";
+import ttsRouter from "./tts";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(bookmarksRouter);
 router.use(tafseerProxyRouter);
 router.use(wordLookupRouter);
 router.use(arabicChatRouter);
+router.use(ttsRouter);
 
 export default router;
