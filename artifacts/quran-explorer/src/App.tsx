@@ -18,6 +18,7 @@ import { NotesPanel } from './components/NotesPanel';
 import { BookmarksPanel } from './components/BookmarksPanel';
 import { WordOfDay } from './components/WordOfDay';
 import { ArabicChat } from './components/ArabicChat';
+import { loadProgress } from './lib/arabicProgress';
 import { Surah, Note, Bookmark } from './types';
 import { Loader2, BookOpen, Star, Languages, GitBranch, Sparkles, Clock, FileText, Bookmark as BookmarkIcon, MessageCircle } from 'lucide-react';
 
@@ -108,6 +109,7 @@ function AppContent() {
   const [wordSearchInitial, setWordSearchInitial] = useState<string | undefined>(undefined);
   const [isConjugationOpen, setIsConjugationOpen] = useState(false);
   const [isArabicChatOpen, setIsArabicChatOpen] = useState(false);
+  const [arabicProgress, setArabicProgress] = useState(() => loadProgress());
   const [isRootSearchOpen, setIsRootSearchOpen] = useState(false);
   const [isThematicOpen, setIsThematicOpen] = useState(false);
   const [rootSearchPreload, setRootSearchPreload] = useState<string | null>(null);
@@ -289,7 +291,7 @@ function AppContent() {
     >
       {isDictionaryOpen && <WordSearch onClose={() => { setIsDictionaryOpen(false); setWordSearchInitial(undefined); }} initialWord={wordSearchInitial} />}
       {isConjugationOpen && <VerbConjugation onClose={() => setIsConjugationOpen(false)} />}
-      {isArabicChatOpen && <ArabicChat onClose={() => setIsArabicChatOpen(false)} />}
+      {isArabicChatOpen && <ArabicChat onClose={() => { setIsArabicChatOpen(false); setArabicProgress(loadProgress()); }} />}
       {isRootSearchOpen && (
         <RootSearch
           onClose={() => { setIsRootSearchOpen(false); setRootSearchPreload(null); }}
@@ -372,7 +374,6 @@ function AppContent() {
               { key: 'tasreef', icon: <span style={{ fontFamily: '"Amiri", serif', fontSize: '22px', lineHeight: 1 }}>ص</span>, label: t('tasreef'), descEn: 'Verb conjugation table', descUr: 'فعل کی گردان', color: 'var(--grove-gold)', bg: 'color-mix(in srgb, var(--grove-gold) 10%, transparent)', onClick: () => setIsConjugationOpen(true) },
               { key: 'roots', icon: <GitBranch size={22} />, label: t('roots'), descEn: 'Search by Arabic root', descUr: 'عربی جذر سے تلاش', color: 'var(--grove-green)', bg: 'color-mix(in srgb, var(--grove-green) 10%, transparent)', onClick: () => setIsRootSearchOpen(true) },
               { key: 'themes', icon: <Sparkles size={22} />, label: t('themes'), descEn: 'AI thematic verse search', descUr: 'موضوعی آیات تلاش', color: 'var(--grove-purple)', bg: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)', onClick: () => setIsThematicOpen(true) },
-              { key: 'chat', icon: <MessageCircle size={22} />, label: isUrdu ? 'عربی بات چیت' : 'Arabic Tutor', descEn: 'Practice spoken Arabic', descUr: 'عربی گفتگو کی مشق', color: '#C2653A', bg: 'color-mix(in srgb, #C2653A 10%, transparent)', onClick: () => setIsArabicChatOpen(true) },
             ].map(({ key, icon, label, descEn, descUr, color, bg, onClick }) => (
               <button key={key} onClick={onClick}
                 className="flex flex-col items-start gap-3 p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:shadow-md"
@@ -388,6 +389,51 @@ function AppContent() {
                 </div>
               </button>
             ))}
+            {/* Arabic Tutor card with live progress */}
+            <button onClick={() => setIsArabicChatOpen(true)}
+              className="flex flex-col items-start gap-3 p-5 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:shadow-md relative overflow-hidden"
+              style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, #C2653A 20%, transparent)' }}>
+              {arabicProgress.conversationsStarted > 0 && (
+                <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
+                  style={{ background: `linear-gradient(to right, #C2653A ${(arabicProgress.topicsCovered.length / 10) * 100}%, color-mix(in srgb, #C2653A 12%, transparent) 0%)` }} />
+              )}
+              <div className="flex items-start justify-between w-full">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: 'color-mix(in srgb, #C2653A 10%, transparent)', color: '#C2653A' }}>
+                  <MessageCircle size={22} />
+                </div>
+                {arabicProgress.conversationsStarted > 0 && (
+                  <div className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: 'color-mix(in srgb, #C2653A 10%, transparent)', color: '#C2653A' }}>
+                    🔥 {arabicProgress.streak}d
+                  </div>
+                )}
+              </div>
+              <div className="w-full">
+                <div className="font-bold text-sm" style={{ color: 'var(--grove-purple)' }}>
+                  {isUrdu ? 'عربی بات چیت' : 'Arabic Tutor'}
+                </div>
+                {arabicProgress.conversationsStarted > 0 ? (
+                  <div className="mt-1.5 space-y-1">
+                    <div className="flex items-center gap-3 text-[10px]" style={{ color: 'var(--grove-purple)', opacity: 0.6 }}>
+                      <span>{arabicProgress.conversationsStarted} session{arabicProgress.conversationsStarted !== 1 ? 's' : ''}</span>
+                      <span>·</span>
+                      <span>{arabicProgress.topicsCovered.length}/10 topics</span>
+                    </div>
+                    <div className="flex gap-0.5 mt-1">
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <div key={i} className="flex-1 h-1 rounded-full"
+                          style={{ backgroundColor: i < arabicProgress.topicsCovered.length ? '#C2653A' : 'color-mix(in srgb, var(--grove-purple) 10%, transparent)' }} />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-[11px] opacity-55 mt-0.5 leading-snug" style={{ color: 'var(--grove-purple)' }}>
+                    {isUrdu ? 'عربی گفتگو کی مشق' : 'Practice spoken Arabic'}
+                  </div>
+                )}
+              </div>
+            </button>
           </div>
 
           {/* Word of the Day */}

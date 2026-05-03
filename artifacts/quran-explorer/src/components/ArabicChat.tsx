@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Loader2, RotateCcw, Volume2, VolumeX, Mic, MicOff, Play } from 'lucide-react';
+import { X, Send, Loader2, RotateCcw, Volume2, VolumeX, Mic, MicOff, Play, BarChart2 } from 'lucide-react';
+import {
+  loadProgress,
+  recordConversationStart,
+  recordUserMessage,
+  recordBotMessage,
+  ArabicProgress,
+} from '../lib/arabicProgress';
+import { ArabicProgressPanel } from './ArabicProgressPanel';
 
 interface ArabicChatProps {
   onClose: () => void;
@@ -21,12 +29,12 @@ const WELCOME: Message = {
 يمكنني مساعدتك في ممارسة اللغة العربية المحادثة. إليك ما يمكنني فعله:
 
 • نتحدث عن أي موضوع تختاره
-• أُصحح أخطاءك بلطف
+• أُصحح أخطاءك بلطف وفق قواعد النحو الكلاسيكية
 • أقترح عليك مواضيع للمحادثة
 
 هل تريد أن أقترح لك مواضيع للمحادثة؟ أم لديك موضوع في ذهنك؟
 
-(Hello! I'm your Arabic tutor. I can practice conversation with you, correct mistakes, and suggest topics.)`,
+(Hello! I'm your Arabic tutor. I can practice conversation with you, correct mistakes using classical grammar, and suggest topics.)`,
 };
 
 function cleanForSpeech(text: string): string {
@@ -82,40 +90,26 @@ function MessageBubble({
 }) {
   const isBot = msg.role === 'assistant';
   const parts = parseContent(msg.content);
-
   return (
     <div className={`flex gap-3 ${isBot ? 'justify-start' : 'justify-end'}`}>
       {isBot && (
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 text-white text-sm shadow"
-          style={{
-            backgroundColor: isSpeaking ? '#C2653A' : 'var(--grove-purple)',
-            fontFamily: '"Amiri", serif',
-            transition: 'background-color 0.3s',
-          }}
-        >
+        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 text-white text-sm shadow"
+          style={{ backgroundColor: isSpeaking ? '#C2653A' : 'var(--grove-purple)', fontFamily: '"Amiri", serif', transition: 'background-color 0.3s' }}>
           {isSpeaking
-            ? (
-              <span className="flex gap-0.5 items-end h-4">
-                {[0, 1, 2].map(i => (
-                  <span key={i} className="w-0.5 rounded-full bg-white animate-bounce"
-                    style={{ height: `${7 + i * 3}px`, animationDelay: `${i * 0.12}s` }} />
-                ))}
-              </span>
-            )
+            ? <span className="flex gap-0.5 items-end h-4">{[0, 1, 2].map(i => (
+                <span key={i} className="w-0.5 rounded-full bg-white animate-bounce"
+                  style={{ height: `${7 + i * 3}px`, animationDelay: `${i * 0.12}s` }} />
+              ))}</span>
             : 'أ'}
         </div>
       )}
-
       <div className="flex flex-col gap-1 max-w-[82%]">
-        <div
-          className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${isBot ? 'rounded-tl-sm' : 'rounded-tr-sm'}`}
+        <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${isBot ? 'rounded-tl-sm' : 'rounded-tr-sm'}`}
           style={{
             backgroundColor: isBot ? 'var(--grove-paper)' : 'var(--grove-purple)',
             color: isBot ? 'var(--grove-purple)' : 'white',
             border: isBot ? '1px solid color-mix(in srgb, var(--grove-purple) 10%, transparent)' : 'none',
-          }}
-        >
+          }}>
           {parts.map((part, i) => {
             if (part.type === 'correction') {
               return (
@@ -126,48 +120,45 @@ function MessageBubble({
               );
             }
             if (!part.content.trim()) return <br key={i} />;
-            return (
-              <p key={i} dir="auto" style={{ marginBottom: i < parts.length - 1 ? '4px' : 0 }}>
-                {part.content}
-              </p>
-            );
+            return <p key={i} dir="auto" style={{ marginBottom: i < parts.length - 1 ? '4px' : 0 }}>{part.content}</p>;
           })}
         </div>
-
         {isBot && (
-          <button
-            onClick={onReplay}
-            title="Replay audio"
+          <button onClick={onReplay}
             className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all hover:opacity-80"
             style={{
-              backgroundColor: isSpeaking
-                ? 'color-mix(in srgb, #C2653A 12%, transparent)'
-                : voiceOn
-                  ? 'color-mix(in srgb, var(--grove-purple) 7%, transparent)'
-                  : 'transparent',
+              backgroundColor: isSpeaking ? 'color-mix(in srgb, #C2653A 12%, transparent)' : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
               color: isSpeaking ? '#C2653A' : 'var(--grove-purple)',
               opacity: voiceOn ? 1 : 0.4,
-            }}
-          >
+            }}>
             <Play size={10} />
             {isSpeaking ? 'يتكلم...' : 'إعادة'}
           </button>
         )}
       </div>
-
       {!isBot && (
         <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 text-white text-xs font-bold shadow"
-          style={{ backgroundColor: 'var(--grove-teal)' }}>
-          أنت
-        </div>
+          style={{ backgroundColor: 'var(--grove-teal)' }}>أنت</div>
       )}
     </div>
   );
 }
 
-const SpeechRecognitionAPI =
-  (window as unknown as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition ??
-  (window as unknown as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition ??
+type SpeechRecognitionCtor = new () => {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start(): void;
+  stop(): void;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  onresult: ((e: { results: { [i: number]: { [i: number]: { transcript: string } }; length: number } }) => void) | null;
+};
+
+const SpeechRecognitionAPI: SpeechRecognitionCtor | null =
+  (window as unknown as { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor }).SpeechRecognition ??
+  (window as unknown as { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor }).webkitSpeechRecognition ??
   null;
 
 export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
@@ -178,13 +169,17 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [micError, setMicError] = useState('');
+  const [showProgress, setShowProgress] = useState(false);
+  const [progress, setProgress] = useState<ArabicProgress>(loadProgress);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<InstanceType<typeof SpeechRecognition> | null>(null);
+  const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
 
   useEffect(() => {
+    const updated = recordConversationStart();
+    setProgress(updated);
     return () => { stopAudio(); };
   }, []);
 
@@ -218,8 +213,7 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
     const cleaned = cleanForSpeech(text);
     if (!cleaned) return;
     const chunks = chunkArabic(cleaned);
-    if (chunks.length === 0) return;
-    playChunks(chunks, msgId);
+    if (chunks.length) playChunks(chunks, msgId);
   }, [playChunks]);
 
   const sendMessage = useCallback(async (text?: string) => {
@@ -232,6 +226,9 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
+
+    const updatedAfterUser = recordUserMessage(content);
+    setProgress(updatedAfterUser);
 
     try {
       const res = await fetch(`${BASE}/api/arabic-chat`, {
@@ -246,12 +243,12 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed');
 
-      const botMsg: Message = {
-        role: 'assistant',
-        content: data.reply,
-        id: Date.now().toString() + '_bot',
-      };
+      const botMsg: Message = { role: 'assistant', content: data.reply, id: Date.now().toString() + '_bot' };
       setMessages(prev => [...prev, botMsg]);
+
+      const updatedAfterBot = recordBotMessage(data.reply);
+      setProgress(updatedAfterBot);
+
       if (voiceOn) speakText(botMsg.content, botMsg.id);
     } catch {
       setMessages(prev => [...prev, {
@@ -265,36 +262,23 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
     }
   }, [input, messages, isLoading, voiceOn, speakText]);
 
-  const toggleVoice = () => {
-    if (voiceOn) stopAudio();
-    setVoiceOn(v => !v);
-  };
+  const toggleVoice = () => { if (voiceOn) stopAudio(); setVoiceOn(v => !v); };
 
   const toggleMic = () => {
-    if (!SpeechRecognitionAPI) {
-      setMicError('Microphone not supported here. Try Chrome or Edge.');
-      setTimeout(() => setMicError(''), 3000);
-      return;
-    }
+    if (!SpeechRecognitionAPI) { setMicError('Microphone not supported. Try Chrome.'); setTimeout(() => setMicError(''), 3000); return; }
     if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     setMicError('');
     const rec = new SpeechRecognitionAPI();
-    rec.lang = 'ar-SA';
-    rec.continuous = false;
-    rec.interimResults = true;
+    rec.lang = 'ar-SA'; rec.continuous = false; rec.interimResults = true;
     rec.onstart = () => setIsListening(true);
-    rec.onresult = (e: SpeechRecognitionEvent) => {
-      const transcript = Array.from(e.results).map((r: SpeechRecognitionResult) => r[0].transcript).join('');
-      setInput(transcript);
+    rec.onresult = (e: { results: { [i: number]: { [i: number]: { transcript: string } }; length: number } }) => {
+      const texts: string[] = [];
+      for (let i = 0; i < e.results.length; i++) texts.push(e.results[i][0].transcript);
+      setInput(texts.join(''));
     };
     rec.onend = () => { setIsListening(false); setTimeout(() => inputRef.current?.focus(), 50); };
-    rec.onerror = () => {
-      setIsListening(false);
-      setMicError('Could not hear you. Try again.');
-      setTimeout(() => setMicError(''), 3000);
-    };
-    recognitionRef.current = rec;
-    rec.start();
+    rec.onerror = () => { setIsListening(false); setMicError('Could not hear. Try again.'); setTimeout(() => setMicError(''), 3000); };
+    recognitionRef.current = rec; rec.start();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -303,6 +287,8 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
 
   const handleReset = () => {
     stopAudio();
+    const updated = recordConversationStart();
+    setProgress(updated);
     setMessages([WELCOME]);
     setInput('');
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -315,169 +301,176 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
     { ar: 'صحح لغتي', en: 'Correct my Arabic' },
   ];
 
+  const topicsDone = progress.topicsCovered.length;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-      <div className="w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col border"
-        style={{
-          backgroundColor: 'var(--grove-cream)',
-          borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)',
-          height: 'min(700px, 90vh)',
-        }}>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+        <div className="w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col border"
+          style={{ backgroundColor: 'var(--grove-cream)', borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)', height: 'min(700px, 90vh)' }}>
 
-        {/* Header */}
-        <div className="px-5 py-4 border-b flex items-center justify-between shrink-0"
-          style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg"
-              style={{
-                backgroundColor: speakingId ? '#C2653A' : 'var(--grove-purple)',
-                fontFamily: '"Amiri", serif',
-                fontSize: '1.2rem',
-                transition: 'background-color 0.3s',
-              }}>
-              {speakingId
-                ? <span className="flex gap-0.5 items-end h-5">{[0, 1, 2].map(i => (
-                    <span key={i} className="w-0.5 rounded-full bg-white animate-bounce"
-                      style={{ height: `${8 + i * 4}px`, animationDelay: `${i * 0.12}s` }} />
-                  ))}</span>
-                : 'أ'}
-            </div>
-            <div>
-              <h2 className="text-base font-bold" style={{ color: 'var(--grove-purple)' }}>أستاذ · Arabic Tutor</h2>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <p className="text-xs opacity-55" style={{ color: 'var(--grove-purple)' }}>
-                  {speakingId ? 'Speaking Arabic...' : 'AI conversation practice'}
-                </p>
+          {/* Header */}
+          <div className="px-5 py-4 border-b flex items-center justify-between shrink-0"
+            style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg"
+                style={{ backgroundColor: speakingId ? '#C2653A' : 'var(--grove-purple)', fontFamily: '"Amiri", serif', fontSize: '1.2rem', transition: 'background-color 0.3s' }}>
+                {speakingId
+                  ? <span className="flex gap-0.5 items-end h-5">{[0, 1, 2].map(i => (
+                      <span key={i} className="w-0.5 rounded-full bg-white animate-bounce"
+                        style={{ height: `${8 + i * 4}px`, animationDelay: `${i * 0.12}s` }} />
+                    ))}</span>
+                  : 'أ'}
+              </div>
+              <div>
+                <h2 className="text-base font-bold" style={{ color: 'var(--grove-purple)' }}>أستاذ · Arabic Tutor</h2>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  <p className="text-xs opacity-55" style={{ color: 'var(--grove-purple)' }}>
+                    {speakingId ? 'Speaking Arabic...' : 'Classical Arabic · Fusha'}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-1">
-            <button onClick={toggleVoice}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-all hover:opacity-80"
-              style={{
-                backgroundColor: voiceOn
-                  ? 'color-mix(in srgb, #C2653A 12%, transparent)'
-                  : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
-                color: voiceOn ? '#C2653A' : 'var(--grove-purple)',
-              }}>
-              {voiceOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
-              {voiceOn ? 'Voice On' : 'Muted'}
-            </button>
-            <button onClick={handleReset} title="New conversation"
-              className="p-2 rounded-full transition-all hover:opacity-70"
-              style={{ color: 'var(--grove-purple)' }}>
-              <RotateCcw size={17} />
-            </button>
-            <button onClick={onClose}
-              className="p-2 rounded-full transition-all hover:opacity-70"
-              style={{ color: 'var(--grove-purple)' }}>
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {messages.map(msg => (
-            <MessageBubble
-              key={msg.id}
-              msg={msg}
-              isSpeaking={speakingId === msg.id}
-              voiceOn={voiceOn}
-              onReplay={() => {
-                if (speakingId === msg.id) { stopAudio(); }
-                else if (voiceOn) { speakText(msg.content, msg.id); }
-              }}
-            />
-          ))}
-          {isLoading && (
-            <div className="flex gap-3 justify-start">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-sm shadow"
-                style={{ backgroundColor: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>أ</div>
-              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl rounded-tl-sm border shadow-sm"
-                style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)' }}>
-                <Loader2 size={14} className="animate-spin" style={{ color: 'var(--grove-purple)', opacity: 0.5 }} />
-                <span className="text-xs opacity-40" style={{ color: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>يكتب...</span>
-              </div>
-            </div>
-          )}
-          <div ref={bottomRef} />
-        </div>
-
-        {/* Quick starters */}
-        {messages.length === 1 && (
-          <div className="px-5 pb-3 flex gap-2 flex-wrap shrink-0">
-            {QUICK_STARTERS.map(s => (
-              <button key={s.ar} onClick={() => sendMessage(s.ar)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium border transition-all hover:opacity-80"
-                style={{
-                  backgroundColor: 'var(--grove-paper)',
-                  color: 'var(--grove-purple)',
-                  borderColor: 'color-mix(in srgb, var(--grove-purple) 15%, transparent)',
-                }}>
-                <span dir="rtl" style={{ fontFamily: '"Amiri", serif' }}>{s.ar}</span>
-                <span className="opacity-50 ms-1">· {s.en}</span>
+            <div className="flex items-center gap-1">
+              {/* Progress button */}
+              <button onClick={() => setShowProgress(true)}
+                className="relative flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-all hover:opacity-80"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-purple) 7%, transparent)', color: 'var(--grove-purple)' }}>
+                <BarChart2 size={14} />
+                <span>Progress</span>
+                {topicsDone > 0 && (
+                  <span className="w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center text-white"
+                    style={{ backgroundColor: 'var(--grove-gold)' }}>
+                    {topicsDone}
+                  </span>
+                )}
               </button>
-            ))}
+              {/* Voice toggle */}
+              <button onClick={toggleVoice}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-all hover:opacity-80"
+                style={{
+                  backgroundColor: voiceOn ? 'color-mix(in srgb, #C2653A 12%, transparent)' : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
+                  color: voiceOn ? '#C2653A' : 'var(--grove-purple)',
+                }}>
+                {voiceOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                {voiceOn ? 'Voice On' : 'Muted'}
+              </button>
+              <button onClick={handleReset} title="New conversation"
+                className="p-2 rounded-full transition-all hover:opacity-70" style={{ color: 'var(--grove-purple)' }}>
+                <RotateCcw size={17} />
+              </button>
+              <button onClick={onClose}
+                className="p-2 rounded-full transition-all hover:opacity-70" style={{ color: 'var(--grove-purple)' }}>
+                <X size={20} />
+              </button>
+            </div>
           </div>
-        )}
 
-        {/* Input */}
-        <div className="px-4 pb-4 pt-2 shrink-0 border-t"
-          style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
-          {micError && (
-            <p className="text-xs text-center mb-2" style={{ color: '#C2653A' }}>{micError}</p>
+          {/* Progress mini-bar */}
+          {progress.conversationsStarted > 0 && (
+            <div className="px-5 py-2 flex items-center gap-3 shrink-0"
+              style={{ backgroundColor: 'color-mix(in srgb, var(--grove-purple) 3%, transparent)', borderBottom: '1px solid color-mix(in srgb, var(--grove-purple) 5%, transparent)' }}>
+              <div className="flex items-center gap-2 text-[10px] font-bold opacity-50" style={{ color: 'var(--grove-purple)' }}>
+                <span>Session #{progress.conversationsStarted}</span>
+                <span>·</span>
+                <span>{progress.streak} day streak 🔥</span>
+                <span>·</span>
+                <span>{topicsDone}/10 topics</span>
+              </div>
+              <div className="flex-1 h-1 rounded-full overflow-hidden"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${(topicsDone / 10) * 100}%`, backgroundColor: 'var(--grove-gold)' }} />
+              </div>
+            </div>
           )}
-          <div className="flex gap-2 items-end">
-            <button onClick={toggleMic}
-              title={isListening ? 'Stop' : 'Speak in Arabic'}
-              className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-sm shrink-0"
-              style={{
-                backgroundColor: isListening ? '#C2653A' : 'color-mix(in srgb, var(--grove-purple) 8%, transparent)',
-                color: isListening ? 'white' : 'var(--grove-purple)',
-                border: isListening ? 'none' : '1px solid color-mix(in srgb, var(--grove-purple) 15%, transparent)',
-              }}>
-              {isListening ? <MicOff size={16} /> : <Mic size={16} />}
-            </button>
 
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={isListening ? '🎙️ Listening... speak in Arabic' : 'اكتب بالعربية أو بالإنجليزية...'}
-              rows={2}
-              dir="auto"
-              className="flex-1 resize-none rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 transition-all"
-              style={{
-                backgroundColor: isListening ? 'color-mix(in srgb, #C2653A 5%, transparent)' : 'var(--grove-cream)',
-                color: 'var(--grove-purple)',
-                border: isListening
-                  ? '1px solid color-mix(in srgb, #C2653A 30%, transparent)'
-                  : '1px solid color-mix(in srgb, var(--grove-purple) 12%, transparent)',
-                fontFamily: '"Amiri", serif',
-                fontSize: '1rem',
-                lineHeight: '1.5',
-                transition: 'all 0.2s',
-              }}
-              autoFocus
-            />
-
-            <button onClick={() => sendMessage()}
-              disabled={isLoading || !input.trim()}
-              className="w-11 h-11 rounded-2xl flex items-center justify-center text-white transition-all disabled:opacity-40 shadow-md shrink-0"
-              style={{ backgroundColor: 'var(--grove-purple)' }}>
-              <Send size={16} />
-            </button>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            {messages.map(msg => (
+              <MessageBubble key={msg.id} msg={msg} isSpeaking={speakingId === msg.id} voiceOn={voiceOn}
+                onReplay={() => {
+                  if (speakingId === msg.id) stopAudio();
+                  else if (voiceOn) speakText(msg.content, msg.id);
+                }} />
+            ))}
+            {isLoading && (
+              <div className="flex gap-3 justify-start">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-sm shadow"
+                  style={{ backgroundColor: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>أ</div>
+                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl rounded-tl-sm border shadow-sm"
+                  style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)' }}>
+                  <Loader2 size={14} className="animate-spin" style={{ color: 'var(--grove-purple)', opacity: 0.5 }} />
+                  <span className="text-xs opacity-40" style={{ color: 'var(--grove-purple)', fontFamily: '"Amiri", serif' }}>يكتب...</span>
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
           </div>
-          <p className="text-[10px] opacity-30 mt-1.5 text-center" style={{ color: 'var(--grove-purple)' }}>
-            Enter to send · 🎙️ mic to speak · voice powered by Google Translate
-          </p>
+
+          {/* Quick starters */}
+          {messages.length === 1 && (
+            <div className="px-5 pb-3 flex gap-2 flex-wrap shrink-0">
+              {QUICK_STARTERS.map(s => (
+                <button key={s.ar} onClick={() => sendMessage(s.ar)}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium border transition-all hover:opacity-80"
+                  style={{ backgroundColor: 'var(--grove-paper)', color: 'var(--grove-purple)', borderColor: 'color-mix(in srgb, var(--grove-purple) 15%, transparent)' }}>
+                  <span dir="rtl" style={{ fontFamily: '"Amiri", serif' }}>{s.ar}</span>
+                  <span className="opacity-50 ms-1">· {s.en}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Input */}
+          <div className="px-4 pb-4 pt-2 shrink-0 border-t"
+            style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
+            {micError && <p className="text-xs text-center mb-2" style={{ color: '#C2653A' }}>{micError}</p>}
+            <div className="flex gap-2 items-end">
+              <button onClick={toggleMic} title={isListening ? 'Stop' : 'Speak in Arabic'}
+                className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-sm shrink-0"
+                style={{
+                  backgroundColor: isListening ? '#C2653A' : 'color-mix(in srgb, var(--grove-purple) 8%, transparent)',
+                  color: isListening ? 'white' : 'var(--grove-purple)',
+                  border: isListening ? 'none' : '1px solid color-mix(in srgb, var(--grove-purple) 15%, transparent)',
+                }}>
+                {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+              </button>
+              <textarea ref={inputRef} value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={isListening ? '🎙️ Listening...' : 'اكتب بالعربية أو بالإنجليزية...'}
+                rows={2} dir="auto"
+                className="flex-1 resize-none rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 transition-all"
+                style={{
+                  backgroundColor: isListening ? 'color-mix(in srgb, #C2653A 5%, transparent)' : 'var(--grove-cream)',
+                  color: 'var(--grove-purple)',
+                  border: isListening ? '1px solid color-mix(in srgb, #C2653A 30%, transparent)' : '1px solid color-mix(in srgb, var(--grove-purple) 12%, transparent)',
+                  fontFamily: '"Amiri", serif', fontSize: '1rem', lineHeight: '1.5', transition: 'all 0.2s',
+                }} autoFocus />
+              <button onClick={() => sendMessage()} disabled={isLoading || !input.trim()}
+                className="w-11 h-11 rounded-2xl flex items-center justify-center text-white transition-all disabled:opacity-40 shadow-md shrink-0"
+                style={{ backgroundColor: 'var(--grove-purple)' }}>
+                <Send size={16} />
+              </button>
+            </div>
+            <p className="text-[10px] opacity-30 mt-1.5 text-center" style={{ color: 'var(--grove-purple)' }}>
+              Enter to send · 🎙️ mic to speak Arabic
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+
+      {showProgress && (
+        <ArabicProgressPanel
+          progress={progress}
+          onClose={() => setShowProgress(false)}
+          onReset={() => { setProgress(loadProgress()); setShowProgress(false); }}
+        />
+      )}
+    </>
   );
 };
