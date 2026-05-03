@@ -92,12 +92,14 @@ function MessageBubble({
   voiceOn,
   onReplay,
   onToggleTranslation,
+  translationOpen,
 }: {
   msg: Message;
   isSpeaking: boolean;
   voiceOn: boolean;
   onReplay: () => void;
   onToggleTranslation: () => void;
+  translationOpen: boolean;
 }) {
   const isBot = msg.role === 'assistant';
   const parts = parseContent(msg.content);
@@ -129,14 +131,7 @@ function MessageBubble({
                 <div key={i} className="my-1.5 px-3 py-2 rounded-xl text-xs"
                   style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)', borderLeft: '3px solid var(--grove-gold)' }}>
                   <div dir="rtl" style={{ fontFamily: '"Amiri", serif' }}>✏️ {arabicOnly}</div>
-                  {translation && (
-                    <div className="mt-1 opacity-80 flex items-center gap-2">
-                      <button onClick={onToggleTranslation} className="inline-flex items-center justify-center w-5 h-5 rounded-full" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 15%, transparent)' }}>
-                        <Languages size={11} />
-                      </button>
-                      <span>{translation}</span>
-                    </div>
-                  )}
+                  {translation && translationOpen && <div className="mt-1 opacity-80">{translation}</div>}
                 </div>
               );
             }
@@ -148,29 +143,35 @@ function MessageBubble({
                 <div className="flex items-start gap-2">
                   <div className="flex-1">
                     {arabicOnly.trim() && <p dir="auto" style={{ marginBottom: 0 }}>{arabicOnly}</p>}
-                    {translation && <p className="text-[11px] opacity-70 mt-1">{translation}</p>}
+                    {translation && translationOpen && <p className="text-[11px] opacity-70 mt-1">{translation}</p>}
                   </div>
-                  {translation && (
-                    <button onClick={onToggleTranslation} className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-full shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
-                      <Languages size={12} />
-                    </button>
-                  )}
                 </div>
               </div>
             );
           })}
         </div>
         {isBot && (
-          <button onClick={onReplay}
-            className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all hover:opacity-80"
-            style={{
-              backgroundColor: isSpeaking ? 'color-mix(in srgb, #C2653A 12%, transparent)' : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
-              color: isSpeaking ? '#C2653A' : 'var(--grove-purple)',
-              opacity: voiceOn ? 1 : 0.4,
-            }}>
-            <Play size={10} />
-            {isSpeaking ? 'يتكلم...' : 'إعادة'}
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button onClick={onToggleTranslation}
+              className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all hover:opacity-80"
+              style={{
+                backgroundColor: translationOpen ? 'color-mix(in srgb, var(--grove-gold) 16%, transparent)' : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
+                color: translationOpen ? 'var(--grove-gold)' : 'var(--grove-purple)',
+              }}>
+              <Languages size={10} />
+              {translationOpen ? 'Hide translation' : 'Translate'}
+            </button>
+            <button onClick={onReplay}
+              className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all hover:opacity-80"
+              style={{
+                backgroundColor: isSpeaking ? 'color-mix(in srgb, #C2653A 12%, transparent)' : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
+                color: isSpeaking ? '#C2653A' : 'var(--grove-purple)',
+                opacity: voiceOn ? 1 : 0.4,
+              }}>
+              <Play size={10} />
+              {isSpeaking ? 'يتكلم...' : 'إعادة'}
+            </button>
+          </div>
         )}
       </div>
       {!isBot && (
@@ -432,7 +433,8 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
                   if (speakingId === msg.id) stopAudio();
                   else if (voiceOn) speakText(msg.content, msg.id);
                 }}
-                onToggleTranslation={() => setTranslationOpen(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))} />
+                onToggleTranslation={() => setTranslationOpen(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
+                translationOpen={!!translationOpen[msg.id]} />
             ))}
             {isLoading && (
               <div className="flex gap-3 justify-start">
