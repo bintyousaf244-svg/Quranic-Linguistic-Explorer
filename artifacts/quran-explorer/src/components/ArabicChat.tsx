@@ -65,6 +65,15 @@ function chunkArabic(text: string, maxLen = 180): string[] {
   return chunks.filter(c => c.trim().length > 1);
 }
 
+function extractTranslation(text: string): string | null {
+  const match = text.match(/\(([^()]*[A-Za-z][^()]*)\)\s*$/s);
+  return match?.[1]?.trim() || null;
+}
+
+function stripTranslation(text: string): string {
+  return text.replace(/\(([^()]*[A-Za-z][^()]*)\)\s*$/s, '').trim();
+}
+
 function parseContent(text: string) {
   const parts: { type: 'correction' | 'text'; content: string }[] = [];
   for (const line of text.split('\n')) {
@@ -112,15 +121,25 @@ function MessageBubble({
           }}>
           {parts.map((part, i) => {
             if (part.type === 'correction') {
+              const translation = extractTranslation(part.content);
+              const arabicOnly = stripTranslation(part.content);
               return (
                 <div key={i} className="my-1.5 px-3 py-2 rounded-xl text-xs"
                   style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)', borderLeft: '3px solid var(--grove-gold)' }}>
-                  ✏️ {part.content}
+                  <div dir="rtl" style={{ fontFamily: '"Amiri", serif' }}>✏️ {arabicOnly}</div>
+                  {translation && <div className="mt-1 opacity-80">({translation})</div>}
                 </div>
               );
             }
             if (!part.content.trim()) return <br key={i} />;
-            return <p key={i} dir="auto" style={{ marginBottom: i < parts.length - 1 ? '4px' : 0 }}>{part.content}</p>;
+            const translation = extractTranslation(part.content);
+            const arabicOnly = stripTranslation(part.content);
+            return (
+              <div key={i} className="mb-1 last:mb-0">
+                {arabicOnly.trim() && <p dir="auto" style={{ marginBottom: 0 }}>{arabicOnly}</p>}
+                {translation && <p className="text-[11px] opacity-70 mt-1">{translation}</p>}
+              </div>
+            );
           })}
         </div>
         {isBot && (
@@ -310,7 +329,6 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
         <div className="w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col border"
           style={{ backgroundColor: 'var(--grove-cream)', borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)', height: 'min(700px, 90vh)' }}>
 
-          {/* Header */}
           <div className="px-5 py-4 border-b flex items-center justify-between shrink-0"
             style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
             <div className="flex items-center gap-3">
@@ -335,7 +353,6 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
             </div>
 
             <div className="flex items-center gap-1">
-              {/* Progress button */}
               <button onClick={() => setShowProgress(true)}
                 className="relative flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-all hover:opacity-80"
                 style={{ backgroundColor: 'color-mix(in srgb, var(--grove-purple) 7%, transparent)', color: 'var(--grove-purple)' }}>
@@ -348,7 +365,6 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
                   </span>
                 )}
               </button>
-              {/* Voice toggle */}
               <button onClick={toggleVoice}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-all hover:opacity-80"
                 style={{
@@ -369,7 +385,6 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Progress mini-bar */}
           {progress.conversationsStarted > 0 && (
             <div className="px-5 py-2 flex items-center gap-3 shrink-0"
               style={{ backgroundColor: 'color-mix(in srgb, var(--grove-purple) 3%, transparent)', borderBottom: '1px solid color-mix(in srgb, var(--grove-purple) 5%, transparent)' }}>
@@ -388,7 +403,6 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
             </div>
           )}
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
             {messages.map(msg => (
               <MessageBubble key={msg.id} msg={msg} isSpeaking={speakingId === msg.id} voiceOn={voiceOn}
@@ -411,7 +425,6 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
             <div ref={bottomRef} />
           </div>
 
-          {/* Quick starters */}
           {messages.length === 1 && (
             <div className="px-5 pb-3 flex gap-2 flex-wrap shrink-0">
               {QUICK_STARTERS.map(s => (
@@ -425,7 +438,6 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
             </div>
           )}
 
-          {/* Input */}
           <div className="px-4 pb-4 pt-2 shrink-0 border-t"
             style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
             {micError && <p className="text-xs text-center mb-2" style={{ color: '#C2653A' }}>{micError}</p>}
