@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Loader2, X, RefreshCw, BookOpen } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Loader2, X, RefreshCw, BookOpen, Search } from 'lucide-react';
 
 interface VerbConjugationProps {
   onClose: () => void;
@@ -26,7 +26,107 @@ interface TasreefResult {
   source: 'qutrub';
 }
 
-const EXAMPLE_VERBS = ['كتب', 'قرأ', 'ذهب', 'علم', 'نصر', 'سأل', 'جاء', 'قال'];
+interface VerbEntry {
+  ar: string;
+  root: string;
+  en: string;
+}
+
+const VERB_LIST: VerbEntry[] = [
+  { ar: 'كتب', root: 'ك ت ب', en: 'to write' },
+  { ar: 'قرأ', root: 'ق ر أ', en: 'to read, to recite' },
+  { ar: 'ذهب', root: 'ذ ه ب', en: 'to go' },
+  { ar: 'جاء', root: 'ج ي أ', en: 'to come' },
+  { ar: 'قال', root: 'ق و ل', en: 'to say, to speak' },
+  { ar: 'علم', root: 'ع ل م', en: 'to know, to learn' },
+  { ar: 'نصر', root: 'ن ص ر', en: 'to help, to support' },
+  { ar: 'سأل', root: 'س أ ل', en: 'to ask' },
+  { ar: 'عمل', root: 'ع م ل', en: 'to do, to work' },
+  { ar: 'آمن', root: 'أ م ن', en: 'to believe, to have faith' },
+  { ar: 'أكل', root: 'أ ك ل', en: 'to eat' },
+  { ar: 'شرب', root: 'ش ر ب', en: 'to drink' },
+  { ar: 'دخل', root: 'د خ ل', en: 'to enter' },
+  { ar: 'خرج', root: 'خ ر ج', en: 'to exit, to go out' },
+  { ar: 'فتح', root: 'ف ت ح', en: 'to open, to conquer' },
+  { ar: 'أرسل', root: 'ر س ل', en: 'to send' },
+  { ar: 'نزل', root: 'ن ز ل', en: 'to descend, to reveal' },
+  { ar: 'رجع', root: 'ر ج ع', en: 'to return' },
+  { ar: 'جلس', root: 'ج ل س', en: 'to sit' },
+  { ar: 'قام', root: 'ق و م', en: 'to stand, to rise' },
+  { ar: 'نظر', root: 'ن ظ ر', en: 'to look, to see' },
+  { ar: 'سمع', root: 'س م ع', en: 'to hear, to listen' },
+  { ar: 'فعل', root: 'ف ع ل', en: 'to do, to act' },
+  { ar: 'أخذ', root: 'أ خ ذ', en: 'to take' },
+  { ar: 'أعطى', root: 'ع ط و', en: 'to give' },
+  { ar: 'وجد', root: 'و ج د', en: 'to find, to feel' },
+  { ar: 'حمد', root: 'ح م د', en: 'to praise, to thank' },
+  { ar: 'شكر', root: 'ش ك ر', en: 'to be grateful, to thank' },
+  { ar: 'صبر', root: 'ص ب ر', en: 'to be patient, to endure' },
+  { ar: 'تاب', root: 'ت و ب', en: 'to repent, to return' },
+  { ar: 'دعا', root: 'د ع و', en: 'to call, to supplicate, to pray' },
+  { ar: 'صلى', root: 'ص ل و', en: 'to pray, to bless' },
+  { ar: 'صام', root: 'ص و م', en: 'to fast' },
+  { ar: 'حج', root: 'ح ج ج', en: 'to perform pilgrimage' },
+  { ar: 'زكى', root: 'ز ك و', en: 'to purify, to give alms' },
+  { ar: 'هدى', root: 'ه د ي', en: 'to guide' },
+  { ar: 'ضل', root: 'ض ل ل', en: 'to go astray, to be lost' },
+  { ar: 'غفر', root: 'غ ف ر', en: 'to forgive' },
+  { ar: 'رحم', root: 'ر ح م', en: 'to show mercy' },
+  { ar: 'عبد', root: 'ع ب د', en: 'to worship, to serve' },
+  { ar: 'خلق', root: 'خ ل ق', en: 'to create' },
+  { ar: 'أمر', root: 'أ م ر', en: 'to command, to order' },
+  { ar: 'نهى', root: 'ن ه ي', en: 'to forbid, to prohibit' },
+  { ar: 'حكم', root: 'ح ك م', en: 'to judge, to rule' },
+  { ar: 'ظلم', root: 'ظ ل م', en: 'to oppress, to wrong' },
+  { ar: 'عدل', root: 'ع د ل', en: 'to be just, to act fairly' },
+  { ar: 'كفر', root: 'ك ف ر', en: 'to disbelieve, to be ungrateful' },
+  { ar: 'ذكر', root: 'ذ ك ر', en: 'to remember, to mention' },
+  { ar: 'فكر', root: 'ف ك ر', en: 'to think, to reflect' },
+  { ar: 'عقل', root: 'ع ق ل', en: 'to reason, to understand' },
+  { ar: 'رزق', root: 'ر ز ق', en: 'to provide sustenance' },
+  { ar: 'مات', root: 'م و ت', en: 'to die' },
+  { ar: 'عاش', root: 'ع ي ش', en: 'to live' },
+  { ar: 'بعث', root: 'ب ع ث', en: 'to resurrect, to send' },
+  { ar: 'حشر', root: 'ح ش ر', en: 'to gather, to assemble' },
+  { ar: 'حاسب', root: 'ح س ب', en: 'to hold accountable' },
+  { ar: 'جاهد', root: 'ج ه د', en: 'to strive, to struggle' },
+  { ar: 'صدق', root: 'ص د ق', en: 'to speak truth, to confirm' },
+  { ar: 'كذب', root: 'ك ذ ب', en: 'to lie, to deny' },
+  { ar: 'نفق', root: 'ن ف ق', en: 'to spend (in charity)' },
+  { ar: 'وعد', root: 'و ع د', en: 'to promise' },
+  { ar: 'رأى', root: 'ر أ ي', en: 'to see, to perceive' },
+  { ar: 'فهم', root: 'ف ه م', en: 'to understand' },
+  { ar: 'حفظ', root: 'ح ف ظ', en: 'to memorise, to protect' },
+  { ar: 'حمل', root: 'ح م ل', en: 'to carry, to bear' },
+  { ar: 'ولد', root: 'و ل د', en: 'to give birth, to be born' },
+  { ar: 'مشى', root: 'م ش ي', en: 'to walk' },
+  { ar: 'أحب', root: 'ح ب ب', en: 'to love' },
+  { ar: 'خاف', root: 'خ و ف', en: 'to fear' },
+  { ar: 'رجا', root: 'ر ج و', en: 'to hope' },
+  { ar: 'شاء', root: 'ش ي أ', en: 'to will, to wish' },
+  { ar: 'قدر', root: 'ق د ر', en: 'to be able, to decree' },
+];
+
+function stripDiacritics(s: string) {
+  return s.replace(/[\u064B-\u065F\u0670]/g, '');
+}
+
+function getSuggestions(q: string): VerbEntry[] {
+  if (!q.trim()) return [];
+  const lower = q.toLowerCase().trim();
+  const stripped = stripDiacritics(q.trim());
+
+  return VERB_LIST.filter(v => {
+    const arStripped = stripDiacritics(v.ar);
+    return (
+      arStripped.includes(stripped) ||
+      v.ar.includes(q.trim()) ||
+      v.root.replace(/\s/g, '').includes(stripped) ||
+      v.root.includes(stripped) ||
+      v.en.toLowerCase().includes(lower)
+    );
+  }).slice(0, 8);
+}
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
@@ -100,11 +200,18 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
   const [error, setError] = useState('');
   const [searchedVerb, setSearchedVerb] = useState('');
   const [activeTab, setActiveTab] = useState<'maloom' | 'majhool' | 'amr'>('maloom');
+  const [suggestions, setSuggestions] = useState<VerbEntry[]>([]);
+  const [highlightedIdx, setHighlightedIdx] = useState(-1);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const handleSearch = async (verb?: string) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  const handleSearch = useCallback(async (verb?: string) => {
     const v = (verb ?? query).trim();
     if (!v) return;
-
+    setShowSuggestions(false);
+    setSuggestions([]);
     setIsLoading(true);
     setResult(null);
     setError('');
@@ -127,11 +234,68 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
     } finally {
       setIsLoading(false);
     }
+  }, [query]);
+
+  const handleQueryChange = (val: string) => {
+    setQuery(val);
+    setHighlightedIdx(-1);
+    if (val.trim().length >= 1) {
+      const s = getSuggestions(val);
+      setSuggestions(s);
+      setShowSuggestions(s.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
   };
+
+  const selectSuggestion = (v: VerbEntry) => {
+    setQuery(v.ar);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setHighlightedIdx(-1);
+    handleSearch(v.ar);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIdx(i => Math.min(i + 1, suggestions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIdx(i => Math.max(i - 1, -1));
+    } else if (e.key === 'Enter' && highlightedIdx >= 0) {
+      e.preventDefault();
+      selectSuggestion(suggestions[highlightedIdx]);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setHighlightedIdx(-1);
+    }
+  };
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSearch();
+    if (highlightedIdx >= 0 && suggestions[highlightedIdx]) {
+      selectSuggestion(suggestions[highlightedIdx]);
+    } else {
+      handleSearch();
+    }
   };
 
   const tabs = [
@@ -139,6 +303,8 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
     { id: 'majhool' as const, label: 'المجهول', labelEn: 'Passive' },
     { id: 'amr' as const, label: 'الأمر', labelEn: 'Imperative' },
   ];
+
+  const EXAMPLE_VERBS = ['كتب', 'قرأ', 'ذهب', 'علم', 'نصر', 'سأل', 'جاء', 'قال'];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -168,22 +334,29 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
         {/* Search */}
         <div className="p-6 border-b" style={{ backgroundColor: 'var(--grove-cream)', borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
           <form onSubmit={handleSubmit} className="relative mb-4">
+            {/* Search icon */}
+            <Search size={16} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30 pointer-events-none"
+              style={{ color: 'var(--grove-purple)' }} />
+
             <input
+              ref={inputRef}
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="أدخل الفعل الماضي (مثال: كتب، ذهب، قرأ، علم)..."
-              className="w-full pl-4 pr-32 py-4 rounded-2xl text-xl focus:outline-none focus:ring-2 transition-all shadow-sm"
+              onChange={(e) => handleQueryChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={() => query.trim() && suggestions.length > 0 && setShowSuggestions(true)}
+              placeholder="Type a verb in Arabic or English — e.g. كتب or 'write'..."
+              className="w-full pl-4 pr-12 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 transition-all shadow-sm"
               style={{
                 backgroundColor: 'var(--grove-paper)',
                 color: 'var(--grove-purple)',
                 border: '1px solid color-mix(in srgb, var(--grove-purple) 12%, transparent)',
                 fontFamily: '"Amiri", serif',
-                direction: 'rtl',
-                textAlign: 'right',
+                direction: query && /[\u0600-\u06FF]/.test(query) ? 'rtl' : 'ltr',
               }}
               autoFocus
             />
+
             <button
               type="submit"
               disabled={isLoading || !query.trim()}
@@ -193,6 +366,43 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
               {isLoading ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
               صرِّف
             </button>
+
+            {/* Suggestions dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div
+                ref={suggestionsRef}
+                className="absolute top-full left-0 right-0 mt-1 rounded-2xl border shadow-xl overflow-hidden z-50"
+                style={{ backgroundColor: 'var(--grove-paper)', borderColor: 'color-mix(in srgb, var(--grove-purple) 12%, transparent)' }}
+              >
+                {suggestions.map((v, i) => (
+                  <button
+                    key={v.ar}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); selectSuggestion(v); }}
+                    onMouseEnter={() => setHighlightedIdx(i)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b last:border-b-0"
+                    style={{
+                      backgroundColor: i === highlightedIdx
+                        ? 'color-mix(in srgb, var(--grove-gold) 8%, transparent)'
+                        : 'transparent',
+                      borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)',
+                    }}
+                  >
+                    <span className="text-xl leading-none shrink-0 w-16 text-right" dir="rtl"
+                      style={{ fontFamily: '"Amiri", serif', color: 'var(--grove-purple)' }}>
+                      {v.ar}
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                      style={{ backgroundColor: 'color-mix(in srgb, var(--grove-green) 10%, transparent)', color: 'var(--grove-green)' }}>
+                      {v.root}
+                    </span>
+                    <span className="text-xs opacity-55 truncate" style={{ color: 'var(--grove-purple)' }}>
+                      {v.en}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </form>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -202,6 +412,7 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
             {EXAMPLE_VERBS.map((v) => (
               <button
                 key={v}
+                type="button"
                 onClick={() => { setQuery(v); handleSearch(v); }}
                 className="px-3 py-1 rounded-full text-sm transition-all hover:opacity-80"
                 style={{
@@ -238,9 +449,7 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
                     onClick={() => setActiveTab(tab.id)}
                     className="px-4 py-2 rounded-t-xl text-sm font-semibold transition-all"
                     style={{
-                      backgroundColor: activeTab === tab.id
-                        ? 'var(--grove-paper)'
-                        : 'transparent',
+                      backgroundColor: activeTab === tab.id ? 'var(--grove-paper)' : 'transparent',
                       color: activeTab === tab.id ? 'var(--grove-purple)' : 'color-mix(in srgb, var(--grove-purple) 45%, transparent)',
                       borderBottom: activeTab === tab.id ? '2px solid var(--grove-gold)' : '2px solid transparent',
                       fontFamily: '"Amiri", serif',
@@ -281,7 +490,6 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
                     />
                   </>
                 )}
-
                 {activeTab === 'majhool' && (
                   <>
                     <SectionTable
@@ -300,7 +508,6 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
                     />
                   </>
                 )}
-
                 {activeTab === 'amr' && (
                   <SectionTable
                     title="فعل الأمر"
@@ -325,7 +532,7 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
                   تصريف الأفعال العربية
                 </p>
                 <p className="text-sm opacity-50 max-w-sm" style={{ color: 'var(--grove-purple)' }}>
-                  Enter an Arabic verb in its past tense form to get the complete conjugation table — powered by the Qutrub morphological engine.
+                  Type any Arabic verb or its English meaning to get the full conjugation table — powered by the Qutrub morphological engine.
                 </p>
               </div>
             </div>
