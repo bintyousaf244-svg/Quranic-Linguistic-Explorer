@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Loader2, RotateCcw, Volume2, VolumeX, Mic, MicOff, Play, BarChart2 } from 'lucide-react';
+import { X, Send, Loader2, RotateCcw, Volume2, VolumeX, Mic, MicOff, Play, BarChart2, Languages } from 'lucide-react';
 import {
   loadProgress,
   recordConversationStart,
@@ -91,11 +91,13 @@ function MessageBubble({
   isSpeaking,
   voiceOn,
   onReplay,
+  onToggleTranslation,
 }: {
   msg: Message;
   isSpeaking: boolean;
   voiceOn: boolean;
   onReplay: () => void;
+  onToggleTranslation: () => void;
 }) {
   const isBot = msg.role === 'assistant';
   const parts = parseContent(msg.content);
@@ -127,7 +129,14 @@ function MessageBubble({
                 <div key={i} className="my-1.5 px-3 py-2 rounded-xl text-xs"
                   style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)', borderLeft: '3px solid var(--grove-gold)' }}>
                   <div dir="rtl" style={{ fontFamily: '"Amiri", serif' }}>✏️ {arabicOnly}</div>
-                  {translation && <div className="mt-1 opacity-80">({translation})</div>}
+                  {translation && (
+                    <div className="mt-1 opacity-80 flex items-center gap-2">
+                      <button onClick={onToggleTranslation} className="inline-flex items-center justify-center w-5 h-5 rounded-full" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 15%, transparent)' }}>
+                        <Languages size={11} />
+                      </button>
+                      <span>{translation}</span>
+                    </div>
+                  )}
                 </div>
               );
             }
@@ -136,8 +145,17 @@ function MessageBubble({
             const arabicOnly = stripTranslation(part.content);
             return (
               <div key={i} className="mb-1 last:mb-0">
-                {arabicOnly.trim() && <p dir="auto" style={{ marginBottom: 0 }}>{arabicOnly}</p>}
-                {translation && <p className="text-[11px] opacity-70 mt-1">{translation}</p>}
+                <div className="flex items-start gap-2">
+                  <div className="flex-1">
+                    {arabicOnly.trim() && <p dir="auto" style={{ marginBottom: 0 }}>{arabicOnly}</p>}
+                    {translation && <p className="text-[11px] opacity-70 mt-1">{translation}</p>}
+                  </div>
+                  {translation && (
+                    <button onClick={onToggleTranslation} className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-full shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
+                      <Languages size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -190,6 +208,7 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
   const [micError, setMicError] = useState('');
   const [showProgress, setShowProgress] = useState(false);
   const [progress, setProgress] = useState<ArabicProgress>(loadProgress);
+  const [translationOpen, setTranslationOpen] = useState<Record<string, boolean>>({});
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -264,17 +283,20 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
 
       const botMsg: Message = { role: 'assistant', content: data.reply, id: Date.now().toString() + '_bot' };
       setMessages(prev => [...prev, botMsg]);
+      setTranslationOpen(prev => ({ ...prev, [botMsg.id]: false }));
 
       const updatedAfterBot = recordBotMessage(data.reply);
       setProgress(updatedAfterBot);
 
       if (voiceOn) speakText(botMsg.content, botMsg.id);
     } catch {
-      setMessages(prev => [...prev, {
+      const errMsg: Message = {
         role: 'assistant',
         content: 'عذراً، حدث خطأ ما. يرجى المحاولة مرة أخرى.\n(Sorry, something went wrong. Please try again.)',
         id: Date.now().toString() + '_err',
-      }]);
+      };
+      setMessages(prev => [...prev, errMsg]);
+      setTranslationOpen(prev => ({ ...prev, [errMsg.id]: false }));
     } finally {
       setIsLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -409,7 +431,8 @@ export const ArabicChat: React.FC<ArabicChatProps> = ({ onClose }) => {
                 onReplay={() => {
                   if (speakingId === msg.id) stopAudio();
                   else if (voiceOn) speakText(msg.content, msg.id);
-                }} />
+                }}
+                onToggleTranslation={() => setTranslationOpen(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))} />
             ))}
             {isLoading && (
               <div className="flex gap-3 justify-start">
