@@ -66,12 +66,12 @@ function chunkArabic(text: string, maxLen = 180): string[] {
 }
 
 function extractTranslation(text: string): string | null {
-  const match = text.match(/\(([^()]*[A-Za-z][^()]*)\)\s*$/s);
+  const match = text.match(/\(([^()]*[A-Za-z][^()]*)\)(?:\s*[.،؟!]?)$/);
   return match?.[1]?.trim() || null;
 }
 
 function stripTranslation(text: string): string {
-  return text.replace(/\(([^()]*[A-Za-z][^()]*)\)\s*$/s, '').trim();
+  return text.replace(/\s*\(([^()]*[A-Za-z][^()]*)\)(?:\s*[.،؟!]?)?$/g, '').trim();
 }
 
 function parseContent(text: string) {
