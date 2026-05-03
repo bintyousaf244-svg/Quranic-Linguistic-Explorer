@@ -55,16 +55,16 @@ function SectionTable({
         style={{ color: 'var(--grove-purple)' }}>{title}</h3>
       <div className="rounded-xl overflow-hidden border"
         style={{ borderColor: 'color-mix(in srgb, var(--grove-purple) 12%, transparent)' }}>
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full text-sm border-collapse" dir="rtl">
           <thead>
             <tr style={{ backgroundColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)' }}>
               <th className="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider opacity-50 border-b"
-                style={{ color: 'var(--grove-purple)', borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)', minWidth: '60px' }}>
+                style={{ color: 'var(--grove-purple)', borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)', minWidth: '70px' }}>
                 الضمير
               </th>
               {columns.map(col => (
-                <th key={col.key} className="text-center px-3 py-2 text-[9px] font-bold uppercase tracking-wider opacity-50 border-b border-r first:border-r-0"
-                  style={{ color: 'var(--grove-purple)', borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)' }} dir="rtl">
+                <th key={col.key} className="text-center px-3 py-2 text-[9px] font-bold uppercase tracking-wider opacity-50 border-b border-r"
+                  style={{ color: 'var(--grove-purple)', borderColor: 'color-mix(in srgb, var(--grove-purple) 10%, transparent)' }}>
                   {col.label}
                 </th>
               ))}
@@ -75,14 +75,12 @@ function SectionTable({
               <tr key={i}
                 style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'color-mix(in srgb, var(--grove-purple) 2%, transparent)' }}>
                 <td className="text-right px-3 py-2 border-b"
-                  style={{ color: 'var(--grove-purple)', borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)', fontFamily: 'var(--font-arabic-var)', opacity: 0.7, fontSize: '0.95em', whiteSpace: 'nowrap' }}
-                  dir="rtl">
+                  style={{ color: 'var(--grove-purple)', borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)', fontFamily: 'var(--font-arabic-var)', opacity: 0.7, fontSize: '0.95em', whiteSpace: 'nowrap' }}>
                   {row.pronoun}
                 </td>
                 {columns.map(col => (
                   <td key={col.key} className="text-center px-3 py-2 border-b border-r"
-                    style={{ borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)', color: 'var(--grove-purple)' }}
-                    dir="rtl">
+                    style={{ borderColor: 'color-mix(in srgb, var(--grove-purple) 6%, transparent)', color: 'var(--grove-purple)' }}>
                     {row[col.key] ? AR(row[col.key] as string) : <span className="opacity-20 text-xs">—</span>}
                   </td>
                 ))}
