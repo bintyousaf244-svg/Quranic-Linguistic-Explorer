@@ -230,7 +230,7 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
           ) : result ? (
             <div>
               {/* Tabs */}
-              <div className="flex border-b px-6 pt-4 gap-1"
+              <div className="flex border-b px-6 pt-4 gap-1" dir="rtl"
                 style={{ borderColor: 'color-mix(in srgb, var(--grove-purple) 8%, transparent)' }}>
                 {tabs.map(tab => (
                   <button
@@ -246,7 +246,6 @@ export const VerbConjugation: React.FC<VerbConjugationProps> = ({ onClose }) => 
                       fontFamily: '"Amiri", serif',
                       fontSize: '1rem',
                     }}
-                    dir="rtl"
                   >
                     {tab.label}
                     <span className="text-[9px] font-normal ms-1 opacity-60" style={{ fontFamily: 'inherit' }}>
