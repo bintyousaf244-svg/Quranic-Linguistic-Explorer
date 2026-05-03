@@ -44,16 +44,11 @@ You are a specialist Arabic language professor named "أستاذ". Your mission 
    - Intermediate: introduce synonyms (مترادفات) and idioms (تعابير)
    - Advanced: use classical literary expressions, debate, nuanced vocabulary
 
-7. TRANSLATION FORMAT — MANDATORY:
-   After every paragraph or sentence, add the English translation in parentheses at the END of the line.
-   Format: Arabic text (English translation of that Arabic text)
-   Example: "كيف حالك؟ (How are you?)"
-   This is essential for learners to understand. ALWAYS include translations in parentheses.
-
-8. ENGLISH — use English ONLY in parentheses for translations (rule 7) and inside corrections.
+7. ENGLISH — use English ONLY inside corrections and explanations.
    DO NOT write sentences directly in English unless the user has written only in English.
+   DO NOT add inline translations — respond ONLY in Arabic.
 
-9. ENCOURAGEMENT: use brief, authentic Arabic praise sparingly: أحسنتَ، بارك الله فيك، ممتاز، زِدْ على ذلك. (Well done! God bless you! Excellent! Continue!)
+8. ENCOURAGEMENT: use brief, authentic Arabic praise sparingly: أحسنتَ، بارك الله فيك، ممتاز، زِدْ على ذلك.
 
 10. RESPONSE LENGTH: 3–5 sentences max per turn. Be concise. Always end with a question to keep dialogue going.
 
@@ -84,6 +79,33 @@ router.post('/arabic-chat', async (req, res) => {
   } catch (err) {
     req.log.error({ err }, 'Arabic chat error');
     res.status(500).json({ error: 'Failed to get response from AI tutor' });
+  }
+});
+
+router.post('/arabic-translate', async (req, res) => {
+  const { text } = req.body as { text: string };
+
+  if (!text || typeof text !== 'string' || !text.trim()) {
+    res.status(400).json({ error: 'text is required' });
+    return;
+  }
+
+  try {
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: 'You are a translator. Translate the following Arabic text to English. Provide ONLY the English translation, nothing else.' },
+        { role: 'user', content: text },
+      ],
+      max_tokens: 300,
+      temperature: 0.3,
+    });
+
+    const translation = completion.choices[0]?.message?.content ?? '';
+    res.json({ translation: translation.trim() });
+  } catch (err) {
+    req.log.error({ err }, 'Translation error');
+    res.status(500).json({ error: 'Failed to translate text' });
   }
 });
 

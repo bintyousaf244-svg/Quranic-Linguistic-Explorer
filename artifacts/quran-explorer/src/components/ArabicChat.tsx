@@ -32,9 +32,7 @@ const WELCOME: Message = {
 • أُصحح أخطاءك بلطف وفق قواعد النحو الكلاسيكية
 • أقترح عليك مواضيع للمحادثة
 
-هل تريد أن أقترح لك مواضيع للمحادثة؟ أم لديك موضوع في ذهنك؟
-
-(Hello! I'm your Arabic tutor. I can practice conversation with you, correct mistakes using classical grammar, and suggest topics.)`,
+هل تريد أن أقترح لك مواضيع للمحادثة؟ أم لديك موضوع في ذهنك؟`,
 };
 
 function cleanForSpeech(text: string): string {
@@ -102,8 +100,38 @@ function MessageBubble({
   translationOpen: boolean;
 }) {
   const isBot = msg.role === 'assistant';
+  const [translation, setTranslation] = useState<string | null>(null);
+  const [translationLoading, setTranslationLoading] = useState(false);
   const parts = parseContent(msg.content);
   const showTranslation = translationOpen;
+
+  const handleToggleTranslation = async () => {
+    if (!isBot) return;
+    if (translationOpen && translation) {
+      // If already has translation, just toggle
+      onToggleTranslation();
+      return;
+    }
+    if (!translationOpen && !translation) {
+      // Need to fetch translation
+      setTranslationLoading(true);
+      try {
+        const res = await fetch(`${BASE}/api/arabic-translate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: msg.content }),
+        });
+        const data = await res.json();
+        setTranslation(data.translation || '');
+      } catch (err) {
+        console.error('Translation fetch failed:', err);
+      } finally {
+        setTranslationLoading(false);
+      }
+    }
+    onToggleTranslation();
+  };
+
   return (
     <div className={`flex gap-3 ${isBot ? 'justify-start' : 'justify-end'}`}>
       {isBot && (
@@ -126,42 +154,40 @@ function MessageBubble({
           }}>
           {parts.map((part, i) => {
             if (part.type === 'correction') {
-              const translation = extractTranslation(part.content);
-              const arabicOnly = stripTranslation(part.content);
               return (
                 <div key={i} className="my-1.5 px-3 py-2 rounded-xl text-xs"
                   style={{ backgroundColor: 'color-mix(in srgb, var(--grove-gold) 12%, transparent)', color: 'var(--grove-gold)', borderLeft: '3px solid var(--grove-gold)' }}>
-                  <div dir="rtl" style={{ fontFamily: '"Amiri", serif' }}>✏️ {arabicOnly}</div>
-                  {translation && showTranslation && <div className="mt-1 opacity-80">{translation}</div>}
+                  <div dir="rtl" style={{ fontFamily: '"Amiri", serif' }}>✏️ {part.content}</div>
                 </div>
               );
             }
             if (!part.content.trim()) return <br key={i} />;
-            const arabicOnly = stripTranslation(part.content);
             return (
-              <div key={i} className="mb-1 last:mb-0">
-                <div className="flex items-start gap-2">
-                  <div className="flex-1">
-                    {arabicOnly.trim() && <p dir="auto" style={{ marginBottom: 0 }}>{arabicOnly}</p>}
-                    {showTranslation && part.content.includes('(') && extractTranslation(part.content) && (
-                      <p className="text-[11px] opacity-70 mt-1">{extractTranslation(part.content)}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <p key={i} dir="auto" style={{ marginBottom: i === parts.length - 1 ? 0 : '0.5rem' }}>
+                {part.content}
+              </p>
             );
           })}
         </div>
+        {showTranslation && translation && (
+          <div className="px-4 py-2 rounded-lg text-xs"
+            style={{ backgroundColor: 'color-mix(in srgb, var(--grove-teal) 10%, transparent)', color: 'var(--grove-teal)' }}>
+            {translation}
+          </div>
+        )}
+        {translationLoading && (
+          <div className="px-4 py-2 text-xs opacity-50">Translating...</div>
+        )}
         {isBot && (
           <div className="flex items-center gap-1.5">
-            <button onClick={onToggleTranslation}
-              className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all hover:opacity-80"
+            <button onClick={handleToggleTranslation} disabled={translationLoading}
+              className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all hover:opacity-80 disabled:opacity-50"
               style={{
                 backgroundColor: showTranslation ? 'color-mix(in srgb, var(--grove-gold) 16%, transparent)' : 'color-mix(in srgb, var(--grove-purple) 7%, transparent)',
                 color: showTranslation ? 'var(--grove-gold)' : 'var(--grove-purple)',
               }}>
               <Languages size={10} />
-              {showTranslation ? 'Hide translation' : 'Translate'}
+              {translationLoading ? 'Loading...' : showTranslation ? 'Hide translation' : 'Translate'}
             </button>
             <button onClick={onReplay}
               className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all hover:opacity-80"
