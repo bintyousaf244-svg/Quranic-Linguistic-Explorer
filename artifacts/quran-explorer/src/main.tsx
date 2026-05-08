@@ -5,7 +5,7 @@ import App from "./App";
 import "./index.css";
 
 // Connect frontend to Render backend
-setBaseUrl("https://quranic-linguistic-explorer.onrender.com");
+setBaseUrl("https://quranic-linguistic-explorer.onrender.com/api");
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
