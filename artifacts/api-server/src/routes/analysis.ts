@@ -10,9 +10,11 @@ const GROQ_KEYS = [
 ].filter(Boolean) as string[];
 
 let currentKeyIndex = 0;
+
 function getGroqClient(): Groq {
   return new Groq({ apiKey: GROQ_KEYS[currentKeyIndex % GROQ_KEYS.length] });
 }
+
 function rotateKey(): void {
   currentKeyIndex = (currentKeyIndex + 1) % GROQ_KEYS.length;
 }
@@ -24,13 +26,22 @@ interface PromptMessages {
   user: string;
 }
 
-function getMessages(type: string, payload: { ayahText?: string; surahName?: string; ayahNumber?: number; word?: string }): PromptMessages {
+function getMessages(
+  type: string,
+  payload: {
+    ayahText?: string;
+    surahName?: string;
+    ayahNumber?: number;
+    word?: string;
+  }
+): PromptMessages {
   const { ayahText, surahName, ayahNumber, word } = payload;
 
   switch (type) {
     case 'grammar':
       return {
         system: `أنت نظام إعراب قرآني يعمل وفق منهج كتاب "الإعراب الميسر" (شركة الدار العربية للموسوعات). هذا الكتاب يتميز بالإيجاز الشديد: كل كلمة تُعرب في عبارة واحدة قصيرة جداً، أحياناً كلمة واحدة فقط مثل "مبتدأ." أو "خبر." أو "صفة لله." — دون ذكر علامة الإعراب إلا إذا كانت غير قياسية أو تستدعي التنبيه. الكلمات تُكتب داخل أقواس قرآنية ﴿ ﴾.`,
+
         user: `أعرِب الآية الكريمة التالية من سورة ${surahName}، الآية رقم ${ayahNumber}، وفق أسلوب "الإعراب الميسر" الموجز جداً:
 
 ﴿${ayahText}﴾
@@ -77,12 +88,35 @@ function getMessages(type: string, payload: { ayahText?: string; surahName?: str
 - لا تخترع الإعلال أو الإدغام أو القواعد الصرفية.
 - إذا كانت الكلمة تحتمل خلافاً بين العلماء فاذكر ذلك.
 
-اكتب بلغة أكاديمية دقيقة جداً، مع المحافظة على الوضوح والتنظيم.`
- };
+اكتب بلغة أكاديمية دقيقة جداً، مع المحافظة على الوضوح والتنظيم.`,
+
+        user: `قم بالتحليل الصرفي الكامل والدقيق للكلمات المحورية في الآية الكريمة التالية من سورة ${surahName}، الآية رقم ${ayahNumber}:
+
+"${ayahText}"
+
+لكل كلمة أساسية في الآية (تجاوز حروف الجر والضمائر البسيطة وركّز على الأسماء والأفعال والمشتقات)، قدّم التحليل التالي بالتفصيل:
+
+**الكلمة: [اكتب الكلمة]**
+- **الجذر (الجذر اللغوي):** اذكر حروف الجذر الثلاثية أو الرباعية ومعناه الأصلي.
+- **الوزن:** اذكر وزنه الصرفي الدقيق مع ضبط الشكل الكامل.
+- **النوع:** (مصدر / اسم فاعل / اسم مفعول / صفة مشبهة / فعل ماضٍ / مضارع ...إلخ).
+- **التحليل الصرفي والإعلال:** إذا وقع في الكلمة إعلال أو إبدال أو إدغام، فاشرحه خطوة بخطوة مع ذكر القاعدة الصرفية.
+- **الصرف الصغير (للفعل المجرد أو المزيد):** اذكر الفعل الماضي والمضارع والمصدر واسم الفاعل واسم المفعول.
+- **الصرف الكبير (للصيغة المستخدمة في الآية):** اذكر تصريف الكلمة للمفرد والمثنى والجمع والمذكر والمؤنث حسب ما ينطبق عليها.
+
+افصل بين كل كلمة بخط فاصل (---).
+
+اختم بـ**خاتمة صرفية** تُبرز أهم الظواهر الصرفية في الآية وبلاغتها اللغوية.
+
+إذا لم تستطع التحقق من معلومة صرفية بشكل موثوق، فاذكر ذلك بوضوح ولا تخمّن.
+
+اكتب التحليل كاملاً بالعربية الفصحى على مستوى المتخصصين في علم الصرف.`
+      };
 
     case 'dictionary':
       return {
         system: `You are a Quranic lexicographer with deep expertise in classical Arabic dictionaries including Lisan al-Arab, Mu'jam Maqayis al-Lugha, Al-Mufradat fi Gharib al-Quran by Al-Raghib al-Asfahani, and Lane's Lexicon.`,
+
         user: `Provide a comprehensive word-by-word lexical analysis for the following ayah from Surah ${surahName}, Ayah ${ayahNumber}:
 
 "${ayahText}"
@@ -101,6 +135,7 @@ Format as a clean structured list for each word (not a table, for better readabi
     case 'word':
       return {
         system: `You are a rigorous Arabic-English lexicographer specializing in Quranic vocabulary, cross-referencing Ibn Manzur's "Lisan al-Arab", Al-Fayruzabadi's "Al-Qamus al-Muhit", Al-Raghib's "Al-Mufradat fi Gharib al-Quran", and Lane's Lexicon.`,
+
         user: `Provide a detailed dictionary entry for the Arabic word: **"${word}"**
 
 Include:
@@ -118,6 +153,7 @@ Format with clear Markdown headings.`
     case 'conjugation':
       return {
         system: `أنت متخصص في علم الصرف والتصريف العربي الكلاسيكي. مهمتك توليد جدول تصريف كامل ودقيق لأي فعل عربي يُعطى لك — سواء أُعطي بصيغة الماضي أو المضارع أو المصدر أو أي صيغة أخرى. تلتزم بمنهج النحاة البصريين والكوفيين وتتبع أوزان الصرف الكلاسيكية بدقة تامة.`,
+
         user: `صرِّف الفعل العربي التالي تصريفاً كاملاً: **"${word}"**
 
 **أولاً — معلومات الفعل:**
@@ -171,7 +207,13 @@ Format with clear Markdown headings.`
   }
 }
 
-const VALID_TYPES = new Set(['grammar', 'morphology', 'dictionary', 'word', 'conjugation']);
+const VALID_TYPES = new Set([
+  'grammar',
+  'morphology',
+  'dictionary',
+  'word',
+  'conjugation'
+]);
 
 router.post('/analysis/stream', async (req, res) => {
   const { type, ayahText, surahName, ayahNumber, word } = req.body;
@@ -182,8 +224,14 @@ router.post('/analysis/stream', async (req, res) => {
   }
 
   let messages: PromptMessages;
+
   try {
-    messages = getMessages(type, { ayahText, surahName, ayahNumber, word });
+    messages = getMessages(type, {
+      ayahText,
+      surahName,
+      ayahNumber,
+      word
+    });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
     return;
@@ -195,6 +243,7 @@ router.post('/analysis/stream', async (req, res) => {
   res.flushHeaders();
 
   const groq = getGroqClient();
+
   try {
     const stream = await groq.chat.completions.create({
       model: MODEL,
@@ -202,30 +251,44 @@ router.post('/analysis/stream', async (req, res) => {
         { role: 'system', content: messages.system },
         { role: 'user', content: messages.user }
       ],
-      temperature: 0.05,
+      temperature: 0,
       max_tokens: 4096,
       stream: true
     });
 
     for await (const chunk of stream) {
       const text = chunk.choices[0]?.delta?.content ?? '';
+
       if (text) {
-        res.write(`data: ${JSON.stringify({ text })}\n\n`);
+        res.write(`data: ${JSON.stringify({ text })}
+
+`);
       }
     }
 
-    res.write('data: [DONE]\n\n');
+    res.write('data: [DONE]
+
+');
     res.end();
   } catch (err: any) {
     req.log.error({ err }, 'Groq streaming error');
+
     const is429 = err?.status === 429;
-    if (is429 && GROQ_KEYS.length > 1) rotateKey();
+
+    if (is429 && GROQ_KEYS.length > 1) {
+      rotateKey();
+    }
+
     const msg = is429
       ? 'Daily token limit reached. Please try again in a few hours.'
       : 'Analysis failed. Please try again.';
-    res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+
+    res.write(`data: ${JSON.stringify({ error: msg })}
+
+`);
     res.end();
   }
 });
 
 export default router;
+```
