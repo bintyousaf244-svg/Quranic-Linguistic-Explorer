@@ -19,7 +19,13 @@ export async function fetchAuthenticGrammar(surah: number, ayah: number): Promis
 
 export async function streamAnalysis(
   type: AnalysisType,
-  payload: { ayahText?: string; surahName?: string; ayahNumber?: number; word?: string },
+  payload: {
+  ayahText?: string;
+  surahName?: string;
+  surahNumber?: number;
+  ayahNumber?: number;
+  word?: string;
+},
   onChunk: (text: string) => void
 ): Promise<string> {
   const response = await fetch(`${BASE}/api/analysis/stream`, {
