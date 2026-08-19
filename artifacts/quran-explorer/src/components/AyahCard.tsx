@@ -122,21 +122,37 @@ export const AyahCard: React.FC<AyahCardProps> = ({
     }
   };
 
-  const handleWordClick = (raw: string, wordIndex: number, e: React.MouseEvent) => {
+  const handleWordClick = (raw: string, tokenIndex: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    const word = raw.replace(/[﴿﴾۝۞۩\u0600-\u0605\u061C\u06DD]/g, '').trim();
-    if (!word) return;
+    const word = raw.replace(/[﴿﴾۝۞۩\u0600-\u0605\u061C\u06DD\uFEFF]/g, '').trim();
+    const cleaned = word.replace(/[\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED]/g, '').trim();
+    if (!cleaned) return;
+
+    const allTokens = ayah.text.split(' ');
+    let actualWordIndex = 0;
+    for (let k = 0; k < tokenIndex; k++) {
+      const cleanK = allTokens[k]?.replace(/[﴿﴾۝۞۩\u0600-\u0605\u061C\u06DD\uFEFF]/g, '').replace(/[\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED]/g, '').trim();
+      if (cleanK) actualWordIndex++;
+    }
+
+    let audioPos = actualWordIndex + 1;
+    if (surahNumber !== 1 && surahNumber !== 9 && ayah.numberInSurah === 1) {
+      if (actualWordIndex >= 4) {
+        audioPos = actualWordIndex - 4 + 1;
+      }
+    }
+
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const s = String(surahNumber).padStart(3, '0');
     const a = String(ayah.numberInSurah).padStart(3, '0');
-    const w = String(wordIndex + 1).padStart(3, '0');
+    const w = String(audioPos).padStart(3, '0');
     setWordAudioUrl(`https://audio.qurancdn.com/wbw/${s}_${a}_${w}.mp3`);
     setActiveWord(word);
     setWordInfo(null);
     setRootFamily([]);
     setRootFamilyCount(undefined);
     setWordPopupPos({ x: rect.left + rect.width / 2, y: rect.top });
-    fetchWordInfo(word, wordIndex);
+    fetchWordInfo(word, actualWordIndex);
   };
 
   useEffect(() => {
@@ -191,7 +207,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
       }
 
       let fullText = '';
-      await streamAnalysis(type, { ayahText: ayah.text, surahName, ayahNumber: ayah.numberInSurah }, (text) => {
+      await streamAnalysis(type, { ayahText: ayah.text, surahName, surahNumber, ayahNumber: ayah.numberInSurah }, (text) => {
         fullText = text;
         if (type === 'grammar') {
           setGrammarAnalysis(text);

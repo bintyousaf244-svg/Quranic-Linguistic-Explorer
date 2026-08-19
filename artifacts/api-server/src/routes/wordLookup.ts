@@ -13,14 +13,16 @@ interface WordInfo {
   source?: 'classical' | 'corpus+quran.com';
 }
 
-// Strip tashkeel (diacritics), tatweel, and normalize alef variants
+// Strip tashkeel (diacritics), tatweel, and normalize alef variants & waqf marks
 function normalize(word: string): string {
+  if (!word) return '';
   return word
-    .replace(/[\u0610-\u061A\u064B-\u0652\u0653-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED\u0640\u0671]/g, '')
-    .replace(/[﴿﴾۝۞۩\u06DD]/g, '')
-    .replace(/[\u0622\u0623\u0625]/g, '\u0627') // أ إ آ → ا
+    .replace(/[\u0610-\u061A\u064B-\u0652\u0653-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED\u0640]/g, '')
+    .replace(/[﴿﴾۝۞۩\u0600-\u0605\u061C\u06DD\uFEFF]/g, '')
+    .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627') // أ إ آ ٱ → ا
     .replace(/\u0624/g, '\u0648')               // ؤ → و
     .replace(/\u0626/g, '\u064A')               // ئ → ي
+    .replace(/\u0649/g, '\u064A')               // ى → ي
     .trim();
 }
 
@@ -133,7 +135,7 @@ async function fetchCorpusMorphology(
     try {
       const resp = await fetch(url, {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; QuranLinguisticExplorer/1.0)' },
-        signal: AbortSignal.timeout(7000),
+        signal: AbortSignal.timeout(2500),
       });
       const html = await resp.text();
 
@@ -172,9 +174,9 @@ function inferType(html: string): string {
 }
 
 function findWithPrefixStrip(key: string): WordInfo | undefined {
-  const prefixes = ['ال', 'بال', 'وال', 'فال', 'كال'];
+  const prefixes = ['وال', 'فال', 'بال', 'كال', 'ولل', 'فلل', 'ال', 'لل', 'وا', 'فا', 'با', 'و', 'ف', 'ب', 'ل', 'ك'];
   for (const p of prefixes) {
-    if (key.startsWith(p)) {
+    if (key.startsWith(p) && key.length > p.length + 1) {
       const s = key.slice(p.length);
       if (CLASSICAL[s]) return CLASSICAL[s];
     }
@@ -191,7 +193,7 @@ async function handleWordLookup(req: Request, res: Response): Promise<void> {
 
   const rawWord = word.trim();
   const dictKey = normalize(rawWord);
-  const wordPos = wordIndex != null ? wordIndex + 1 : null; // 1-based for corpus API
+  const wordPos = wordIndex != null ? wordIndex + 1 : null; // 1-based
   const posKey = (surah != null && ayah != null && wordPos != null) ? `${surah}:${ayah}:${wordPos}` : null;
 
   // 1. In-memory cache
@@ -200,13 +202,13 @@ async function handleWordLookup(req: Request, res: Response): Promise<void> {
   // 2. Classical dictionary (exact + prefix-stripped)
   const classical = CLASSICAL[dictKey] ?? findWithPrefixStrip(dictKey);
   if (classical) {
-    // Enrich with quran.com transliteration only (non-blocking)
+    // Enrich with quran.com transliteration if available
     let transliteration: string | undefined;
     if (surah != null && ayah != null) {
       try {
         const words = await fetchQuranComWords(surah, ayah);
-        // Text-match only for classical enrichment — position fallback is unreliable
-        const wEntry = words.find(w => normalize(w.text_uthmani ?? w.text ?? '') === dictKey);
+        const wEntry = words.find(w => normalize(w.text_uthmani ?? w.text ?? '') === dictKey)
+          ?? (wordPos != null && wordPos <= words.length ? words[wordPos - 1] : undefined);
         transliteration = wEntry?.transliteration?.text;
       } catch { /* optional */ }
     }
@@ -216,20 +218,40 @@ async function handleWordLookup(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // 3. Unknown word — fetch quran.com (meaning) + corpus.quran.com (root/type) in parallel
-  if (surah != null && ayah != null && wordPos != null) {
+  // 3. Unknown word or word outside classical dictionary — fetch quran.com + corpus.quran.com in parallel
+  if (surah != null && ayah != null) {
+    // Handle Bismillah in Ayah 1 for surahs other than 1 and 9
+    let adjustedWordPos = wordPos;
+    if (surah !== 1 && surah !== 9 && ayah === 1 && wordIndex != null) {
+      if (wordIndex < 4 && (dictKey === 'بسم' || dictKey === 'الله' || dictKey === 'الرحمن' || dictKey === 'الرحيم')) {
+        const bismEntry = CLASSICAL[dictKey] ?? { meaning: 'In the name of Allah, the Entirely Merciful, the Especially Merciful' };
+        res.json({ ...bismEntry, source: 'classical' });
+        return;
+      }
+      if (wordIndex >= 4) {
+        adjustedWordPos = wordIndex - 4 + 1;
+      }
+    }
+
     const [quranRes, corpusRes] = await Promise.allSettled([
       fetchQuranComWords(surah, ayah),
-      fetchCorpusMorphology(surah, ayah, wordPos),
+      adjustedWordPos != null ? fetchCorpusMorphology(surah, ayah, adjustedWordPos) : Promise.resolve({}),
     ]);
 
     const result: WordInfo = { source: 'corpus+quran.com' };
 
-    // quran.com: meaning + transliteration (text-match, then position fallback)
+    // quran.com: meaning + transliteration
     if (quranRes.status === 'fulfilled') {
       const words = quranRes.value;
-      const wEntry = words.find(w => normalize(w.text_uthmani ?? w.text ?? '') === dictKey)
-        ?? words.find(w => w.position === wordPos);
+      let wEntry = adjustedWordPos != null && adjustedWordPos <= words.length
+        ? words[adjustedWordPos - 1]
+        : undefined;
+
+      if (!wEntry || (wEntry && normalize(wEntry.text_uthmani ?? wEntry.text ?? '') !== dictKey)) {
+        const textMatch = words.find(w => normalize(w.text_uthmani ?? w.text ?? '') === dictKey);
+        if (textMatch) wEntry = textMatch;
+      }
+
       if (wEntry) {
         result.meaning = wEntry.translation?.text;
         result.transliteration = wEntry.transliteration?.text;
@@ -237,7 +259,7 @@ async function handleWordLookup(req: Request, res: Response): Promise<void> {
     }
 
     // corpus.quran.com: root + type
-    if (corpusRes.status === 'fulfilled' && corpusRes.value.root) {
+    if (corpusRes.status === 'fulfilled' && corpusRes.value && corpusRes.value.root) {
       result.root = corpusRes.value.root;
       result.type = corpusRes.value.type;
     }
@@ -247,7 +269,7 @@ async function handleWordLookup(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // 4. No position — try quran.com only
+  // 4. No position — fallback
   res.json({});
 }
 
