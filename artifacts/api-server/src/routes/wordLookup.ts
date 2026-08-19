@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
+import { getWordMorphology } from '../services/morphologyService';
 
 const router = Router();
 
@@ -10,7 +11,7 @@ interface WordInfo {
   meaning?: string;
   ar_meaning?: string;
   transliteration?: string;
-  source?: 'classical' | 'corpus+quran.com';
+  source?: 'classical' | 'quran.com' | 'corpus+quran.com' | 'ai';
 }
 
 // Strip tashkeel (diacritics), tatweel, and normalize alef variants & waqf marks
@@ -125,54 +126,6 @@ async function fetchQuranComWords(surah: number, ayah: number): Promise<QWord[]>
   return words;
 }
 
-// corpus.quran.com scraper: returns root (Arabic letters) and POS type
-async function fetchCorpusMorphology(
-  surah: number, ayah: number, wordPos: number,
-): Promise<{ root?: string; type?: string }> {
-  // Try segments 1, 2, 3 (some words have prefix + stem + suffix)
-  for (let seg = 1; seg <= 3; seg++) {
-    const url = `http://corpus.quran.com/wordmorphology.jsp?location=(${surah}:${ayah}:${wordPos}:${seg})`;
-    try {
-      const resp = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; QuranLinguisticExplorer/1.0)' },
-        signal: AbortSignal.timeout(2500),
-      });
-      const html = await resp.text();
-
-      // Arabic root is in: (<span class="at">ر ب ب</span>)  after "root is"
-      const rootMatch = html.match(/root is[^(]*\(<span[^>]*class="at"[^>]*>([\u0600-\u06FF ]+)<\/span>\)/);
-      if (!rootMatch) {
-        // Also try: triliteral root is <i ...> (<span class="at">...) pattern
-        const alt = html.match(/<span[^>]*class="at"[^>]*>([\u0600-\u06FF ]{2,})<\/span>/g);
-        if (!alt || alt.length === 0) continue;
-        // take last Arabic span (usually the root)
-        const last = alt[alt.length - 1];
-        const inner = last.match(/>([^<]+)</)?.[1]?.trim();
-        if (!inner || inner.length < 2) continue;
-        const type = inferType(html);
-        return { root: inner, type };
-      }
-
-      const root = rootMatch[1].trim();
-      const type = inferType(html);
-      return { root, type };
-    } catch {
-      continue;
-    }
-  }
-  return {};
-}
-
-function inferType(html: string): string {
-  const lower = html.toLowerCase();
-  if (lower.includes(' verb') || lower.includes('imperfect') || lower.includes('perfect verb') || lower.includes('imperative')) return 'Verb';
-  if (lower.includes(' particle') || lower.includes('preposition') || lower.includes('conjunction') || lower.includes('subordinating')) return 'Particle';
-  if (lower.includes(' pronoun')) return 'Pronoun';
-  if (lower.includes(' adjective') || lower.includes('elative')) return 'Adjective';
-  if (lower.includes(' noun') || lower.includes('proper noun') || lower.includes('verbal noun')) return 'Noun';
-  return 'Noun';
-}
-
 function findWithPrefixStrip(key: string): WordInfo | undefined {
   const prefixes = ['وال', 'فال', 'بال', 'كال', 'ولل', 'فلل', 'ال', 'لل', 'وا', 'فا', 'با', 'و', 'ف', 'ب', 'ل', 'ك'];
   for (const p of prefixes) {
@@ -189,20 +142,25 @@ async function handleWordLookup(req: Request, res: Response): Promise<void> {
     word?: string; surah?: number; ayah?: number; wordIndex?: number;
   };
 
-  if (!word?.trim()) { res.status(400).json({ error: 'word is required' }); return; }
+  if (!word?.trim()) {
+    res.status(400).json({ error: 'word is required' });
+    return;
+  }
 
   const rawWord = word.trim();
   const dictKey = normalize(rawWord);
-  const wordPos = wordIndex != null ? wordIndex + 1 : null; // 1-based
+  const wordPos = wordIndex != null ? wordIndex + 1 : null; // 1-based position
   const posKey = (surah != null && ayah != null && wordPos != null) ? `${surah}:${ayah}:${wordPos}` : null;
 
   // 1. In-memory cache
-  if (posKey && runtimeCache.has(posKey)) { res.json(runtimeCache.get(posKey)); return; }
+  if (posKey && runtimeCache.has(posKey)) {
+    res.json(runtimeCache.get(posKey));
+    return;
+  }
 
-  // 2. Classical dictionary (exact + prefix-stripped)
+  // 2. Classical dictionary exact match or prefix-stripped
   const classical = CLASSICAL[dictKey] ?? findWithPrefixStrip(dictKey);
   if (classical) {
-    // Enrich with quran.com transliteration if available
     let transliteration: string | undefined;
     if (surah != null && ayah != null) {
       try {
@@ -218,13 +176,17 @@ async function handleWordLookup(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // 3. Unknown word or word outside classical dictionary — fetch quran.com + corpus.quran.com in parallel
+  // 3. Word position lookup with authentic local morphology database + Quran.com
   if (surah != null && ayah != null) {
-    // Handle Bismillah in Ayah 1 for surahs other than 1 and 9
+    // Handle Bismillah offset in Ayah 1 of surahs other than 1 & 9
     let adjustedWordPos = wordPos;
     if (surah !== 1 && surah !== 9 && ayah === 1 && wordIndex != null) {
       if (wordIndex < 4 && (dictKey === 'بسم' || dictKey === 'الله' || dictKey === 'الرحمن' || dictKey === 'الرحيم')) {
-        const bismEntry = CLASSICAL[dictKey] ?? { meaning: 'In the name of Allah, the Entirely Merciful, the Especially Merciful' };
+        const bismEntry = CLASSICAL[dictKey] ?? {
+          root: dictKey === 'بسم' ? 'س م و' : dictKey === 'الله' ? 'أ ل ه' : 'ر ح م',
+          type: dictKey === 'الرحمن' || dictKey === 'الرحيم' ? 'Adjective' : 'Noun',
+          meaning: 'In the name of Allah, the Entirely Merciful, the Especially Merciful',
+        };
         res.json({ ...bismEntry, source: 'classical' });
         return;
       }
@@ -233,16 +195,17 @@ async function handleWordLookup(req: Request, res: Response): Promise<void> {
       }
     }
 
-    const [quranRes, corpusRes] = await Promise.allSettled([
-      fetchQuranComWords(surah, ayah),
-      adjustedWordPos != null ? fetchCorpusMorphology(surah, ayah, adjustedWordPos) : Promise.resolve({}),
-    ]);
+    // A. Local authentic morphology lookup (0ms, 100% reliable)
+    const localMorph = adjustedWordPos != null
+      ? getWordMorphology(surah, ayah, adjustedWordPos)
+      : null;
 
-    const result: WordInfo = { source: 'corpus+quran.com' };
+    // B. Quran.com translation & transliteration
+    let quranMeaning: string | undefined;
+    let quranTranslit: string | undefined;
 
-    // quran.com: meaning + transliteration
-    if (quranRes.status === 'fulfilled') {
-      const words = quranRes.value;
+    try {
+      const words = await fetchQuranComWords(surah, ayah);
       let wEntry = adjustedWordPos != null && adjustedWordPos <= words.length
         ? words[adjustedWordPos - 1]
         : undefined;
@@ -253,23 +216,25 @@ async function handleWordLookup(req: Request, res: Response): Promise<void> {
       }
 
       if (wEntry) {
-        result.meaning = wEntry.translation?.text;
-        result.transliteration = wEntry.transliteration?.text;
+        quranMeaning = wEntry.translation?.text;
+        quranTranslit = wEntry.transliteration?.text;
       }
-    }
+    } catch { /* optional */ }
 
-    // corpus.quran.com: root + type
-    if (corpusRes.status === 'fulfilled' && corpusRes.value && corpusRes.value.root) {
-      result.root = corpusRes.value.root;
-      result.type = corpusRes.value.type;
-    }
+    const result: WordInfo = {
+      root: localMorph?.root,
+      type: localMorph?.type ?? 'Noun',
+      meaning: quranMeaning,
+      transliteration: quranTranslit,
+      source: 'corpus+quran.com',
+    };
 
     if (posKey) runtimeCache.set(posKey, result);
     res.json(result);
     return;
   }
 
-  // 4. No position — fallback
+  // 4. Fallback: return empty or whatever matches
   res.json({});
 }
 

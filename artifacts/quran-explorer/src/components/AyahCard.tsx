@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Ayah, Note } from '../types';
-import { BookOpen, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked, Play, Pause, Volume2, Bookmark } from 'lucide-react';
+import { BookOpen, Sparkles, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked, Play, Pause, Volume2, Bookmark } from 'lucide-react';
 import { WordPopup, WordInfo, RootFamilyMatch } from './WordPopup';
 import ReactMarkdown from 'react-markdown';
 import { streamAnalysis, fetchAuthenticGrammar } from '../services/analysisService';
@@ -40,6 +40,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
   const [grammarAnalysis, setGrammarAnalysis] = useState('');
   const [grammarSourceLabel, setGrammarSourceLabel] = useState('');
   const [grammarIsAuthentic, setGrammarIsAuthentic] = useState(false);
+  const [morphologyAnalysis, setMorphologyAnalysis] = useState('');
   const [dictionaryAnalysis, setDictionaryAnalysis] = useState('');
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [noteContent, setNoteContent] = useState(note?.content || '');
@@ -72,8 +73,6 @@ export const AyahCard: React.FC<AyahCardProps> = ({
     } catch { /* ignore */ }
     setIsRootFamilyLoading(true);
     try {
-      // For doubled roots (XYY pattern, e.g. ربب ضلل), the doubled letter appears
-      // with shadda in Quranic text, so substring-match for XYY fails — use XY instead.
       let searchStr = stripped;
       if (stripped.length === 3 && stripped[1] === stripped[2]) {
         searchStr = stripped.slice(0, 2);
@@ -92,7 +91,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
   };
 
   const fetchWordInfo = async (word: string, wordIndex: number) => {
-    const cacheKey = `word_popup_v4_${surahNumber}_${ayah.numberInSurah}_${wordIndex}`;
+    const cacheKey = `word_popup_v5_${surahNumber}_${ayah.numberInSurah}_${wordIndex}`;
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
@@ -169,12 +168,12 @@ export const AyahCard: React.FC<AyahCardProps> = ({
     setActiveTabs(prev => prev.includes(tab) ? prev.filter(t => t !== tab) : [...prev, tab]);
   };
 
-  const handleFetchAnalysis = async (type: 'grammar' | 'dictionary') => {
+  const handleFetchAnalysis = async (type: 'grammar' | 'morphology' | 'dictionary') => {
     const isAlreadyActive = activeTabs.includes(type);
     toggleTab(type);
     if (isAlreadyActive) return;
 
-    const existing = type === 'grammar' ? grammarAnalysis : dictionaryAnalysis;
+    const existing = type === 'grammar' ? grammarAnalysis : type === 'morphology' ? morphologyAnalysis : dictionaryAnalysis;
     if (existing) return;
 
     const cached = AnalysisCache.get(type, surahName, ayah.numberInSurah);
@@ -184,6 +183,8 @@ export const AyahCard: React.FC<AyahCardProps> = ({
         setGrammarAnalysis(cached);
         setGrammarSourceLabel(meta?.sourceLabel ?? '');
         setGrammarIsAuthentic(meta?.authentic ?? false);
+      } else if (type === 'morphology') {
+        setMorphologyAnalysis(cached);
       } else {
         setDictionaryAnalysis(cached);
       }
@@ -213,6 +214,8 @@ export const AyahCard: React.FC<AyahCardProps> = ({
           setGrammarAnalysis(text);
           setGrammarSourceLabel('');
           setGrammarIsAuthentic(false);
+        } else if (type === 'morphology') {
+          setMorphologyAnalysis(text);
         } else {
           setDictionaryAnalysis(text);
         }
@@ -221,6 +224,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
     } catch {
       const msg = 'Failed to fetch analysis. Please try again.';
       if (type === 'grammar') setGrammarAnalysis(msg);
+      else if (type === 'morphology') setMorphologyAnalysis(msg);
       else setDictionaryAnalysis(msg);
     } finally {
       setLoadingStates(prev => ({ ...prev, [type]: false }));
@@ -242,7 +246,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
 
   const TabBtn = ({ id, label, icon: Icon, color }: { id: string; label: string; icon: React.ElementType; color: string }) => (
     <button
-      onClick={() => id === 'notes' ? toggleTab('notes') : handleFetchAnalysis(id as 'grammar' | 'dictionary')}
+      onClick={() => id === 'notes' ? toggleTab('notes') : handleFetchAnalysis(id as 'grammar' | 'morphology' | 'dictionary')}
       className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all"
       style={{
         backgroundColor: activeTabs.includes(id) ? color : `color-mix(in srgb, ${color} 12%, transparent)`,
@@ -383,6 +387,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
               <TabBtn id="tafseer" label={t('tabTafseer')} icon={BookMarked} color="var(--grove-teal)" />
             )}
             <TabBtn id="dictionary" label={t('tabDict')} icon={Languages} color="var(--grove-teal)" />
+            <TabBtn id="morphology" label={t('tabMorph')} icon={Sparkles} color="var(--grove-gold)" />
             <TabBtn id="grammar" label={t('tabIrab')} icon={BookOpen} color="var(--grove-purple)" />
             <TabBtn id="notes" label={t('tabNotes')} icon={MessageSquare} color="var(--grove-pink)" />
           </div>
@@ -489,12 +494,16 @@ export const AyahCard: React.FC<AyahCardProps> = ({
             </div>
           );
         })()}
-        {activeTabs.includes('grammar') && (
-          <Panel id="grammar" title="Arabic I'rab (إعراب)" content={grammarAnalysis} color="var(--grove-purple)" rtl />
-        )}
         {activeTabs.includes('dictionary') && (
           <Panel id="dictionary" title="Word Dictionary" content={dictionaryAnalysis} color="var(--grove-teal)"
             note="Definitions derived from Lisan al-Arab, Mu'jam Maqayis al-Lugha, and Lane's Lexicon." />
+        )}
+        {activeTabs.includes('morphology') && (
+          <Panel id="morphology" title="Morphological Analysis (Sarf)" content={morphologyAnalysis} color="var(--grove-gold)" rtl
+            note="Morphological data follows classical Sarf methodology of Ibn Jinni and Al-Hamalawy." />
+        )}
+        {activeTabs.includes('grammar') && (
+          <Panel id="grammar" title="Arabic I'rab (إعراب)" content={grammarAnalysis} color="var(--grove-purple)" rtl />
         )}
         {activeTabs.includes('notes') && (
           <div className="p-8 md:p-10" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-pink) 6%, transparent)' }}>

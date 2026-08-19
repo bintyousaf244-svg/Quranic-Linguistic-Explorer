@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import Groq from 'groq-sdk';
-import { getVerseMorphology } from "../services/morphologyService";
+import { getVerseMorphology } from '../services/morphologyService';
 
 const router = Router();
 
@@ -30,124 +30,6 @@ interface PromptMessages {
   user: string;
 }
 
-function normalizeWord(word: string): string {
-  if (!word) return '';
-  return word
-    .replace(/[\u0610-\u061A\u064B-\u0652\u0653-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED\u0640]/g, '')
-    .replace(/[﴿﴾۝۞۩\u0600-\u0605\u061C\u06DD\uFEFF]/g, '')
-    .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627')
-    .replace(/\u0624/g, '\u0648')
-    .replace(/\u0626/g, '\u064A')
-    .replace(/\u0649/g, '\u064A')
-    .trim();
-}
-
-const CLASSICAL_LEXICON: Record<string, { root?: string; wazn?: string; type?: string; meaning?: string; ar_meaning?: string }> = {
-  'بسم': { root: 'س م و', wazn: 'فِعْل + بِ', type: 'Noun', meaning: "In the name of — invoking Allah's blessing", ar_meaning: 'باسم: استعانة بذكر اسم الله والتبرك به' },
-  'اسم': { root: 'س م و', wazn: 'فِعْل', type: 'Noun', meaning: 'Ism (Name) — from root samaw (to elevate)', ar_meaning: 'الاسم: ما دلّ على مسمّاه، وأصله من السمو' },
-  'الله': { root: 'أ ل ه', wazn: 'عَلَم', type: 'Noun', meaning: 'Allah — the proper divine name of the one true God', ar_meaning: 'الله: علم على ذات الرب تبارك وتعالى، المستحق للعبادة وحده' },
-  'لله': { root: 'أ ل ه', wazn: 'عَلَم', type: 'Noun', meaning: 'To/for Allah — dedication to the Almighty', ar_meaning: 'لله: اسم الجلالة مجروراً، المعبود بحق' },
-  'الرحمن': { root: 'ر ح م', wazn: 'فَعْلَان', type: 'Adjective', meaning: 'Al-Rahman (The Most Gracious) — vast all-encompassing mercy embracing all creation', ar_meaning: 'الرحمن: صيغة مبالغة من الرحمة، ذو الرحمة الواسعة لجميع الخلق' },
-  'الرحيم': { root: 'ر ح م', wazn: 'فَعِيل', type: 'Adjective', meaning: 'Al-Raheem (The Most Merciful) — continuous mercy for the believers', ar_meaning: 'الرحيم: صيغة مبالغة من الرحمة، كثير الرحمة بالمؤمنين' },
-  'الحمد': { root: 'ح م د', wazn: 'فَعْل', type: 'Noun', meaning: 'Al-Hamd (All praise) — comprehensive praise, adoration, and gratitude', ar_meaning: 'الحمد: الثناء على الجميل الاختياري، أعمّ من الشكر' },
-  'حمد': { root: 'ح م د', wazn: 'فَعْل', type: 'Noun', meaning: 'Hamd (Praise) — sincere praise for virtue', ar_meaning: 'الحمد: الثناء الجميل على المحمود' },
-  'رب': { root: 'ر ب ب', wazn: 'فَعْل', type: 'Noun', meaning: 'Rabb (Lord/Sustainer) — the owner, nourisher, educator, and sustainer', ar_meaning: 'الرب: المالك والسيد والمربّي والمصلح' },
-  'ربي': { root: 'ر ب ب', wazn: 'فَعْل + ي', type: 'Noun', meaning: 'My Lord and Sustainer', ar_meaning: 'ربي: ربّ مضاف إلى ياء المتكلم' },
-  'العالمين': { root: 'ع ل م', wazn: 'فَاعَل + ين', type: 'Noun', meaning: "Al-'Alamin (The worlds) — all of creation besides Allah", ar_meaning: 'العالمون: جمع عالَم، كل ما سوى الله تعالى' },
-  'مالك': { root: 'م ل ك', wazn: 'فَاعِل', type: 'Noun', meaning: 'Malik (Master/King) — sovereign possessor and ruler', ar_meaning: 'مالك: اسم فاعل من مَلَك، صاحب الملك والسلطان' },
-  'ملك': { root: 'م ل ك', wazn: 'فِعْل', type: 'Noun', meaning: 'Malik (King) — sovereign ruler', ar_meaning: 'ملك: صاحب الملك، الآمر الناهي' },
-  'يوم': { root: 'ي و م', wazn: 'فَعْل', type: 'Noun', meaning: 'Yawm (Day) — Day of Judgement and reckoning', ar_meaning: 'يوم: اسم زمان، ويُراد به يوم القيامة' },
-  'الدين': { root: 'د ي ن', wazn: 'فِعْل', type: 'Noun', meaning: 'Al-Din (The Recompense) — judgment, accounting, and religion', ar_meaning: 'الدين: الجزاء والحساب' },
-  'اياك': { root: '—', wazn: 'ضمير', type: 'Pronoun', meaning: 'You alone — exclusive focus and devotion', ar_meaning: 'إياك: ضمير نصب منفصل يُفيد الاختصاص والحصر' },
-  'نعبد': { root: 'ع ب د', wazn: 'نَفْعُل', type: 'Verb', meaning: "We worship — with complete submission, humility, and love", ar_meaning: 'نعبد: فعل مضارع، نتعبد ونتذلل لله وحده' },
-  'نستعين': { root: 'ع و ن', wazn: 'نَسْتَفْعِل', type: 'Verb', meaning: "We seek help — Form X earnestly asking assistance and reliance", ar_meaning: 'نستعين: نطلب العون والمساعدة من الله وحده' },
-  'اهدنا': { root: 'ه د ي', wazn: 'أَفْعِلْنَا', type: 'Verb', meaning: 'Guide us — direct, lead, and keep us firm on the path', ar_meaning: 'اهدنا: دلّنا وأرشدنا وثبّتنا على الطريق المستقيم' },
-  'الصراط': { root: 'ص ر ط', wazn: 'فِعَال', type: 'Noun', meaning: 'Al-Sirat (The path) — the clear straight highway', ar_meaning: 'الصراط: الطريق الواضح المستقيم' },
-  'صراط': { root: 'ص ر ط', wazn: 'فِعَال', type: 'Noun', meaning: 'Sirat (Path) — route and correct way', ar_meaning: 'الصراط: الطريق القويم الواضح' },
-  'المستقيم': { root: 'ق و م', wazn: 'مُسْتَفْعِل', type: 'Adjective', meaning: 'Al-Mustaqeem (The straight) — without crookedness or deviation', ar_meaning: 'المستقيم: اسم فاعل، المعتدل الذي لا اعوجاج فيه' },
-  'الذين': { root: '—', wazn: 'موصول', type: 'Particle', meaning: 'Those who (masculine plural relative pronoun)', ar_meaning: 'الذين: اسم موصول لجمع المذكر' },
-  'انعمت': { root: 'ن ع م', wazn: 'أَفْعَلْتَ', type: 'Verb', meaning: 'You bestowed grace / blessings', ar_meaning: 'أنعمت: فعل ماضٍ من باب الإفعال، منحت النعمة' },
-  'عليهم': { root: 'ع ل و', wazn: 'جار+مجرور', type: 'Particle', meaning: 'Upon them', ar_meaning: 'عليهم: حرف الجر على والضمير هم' },
-  'غير': { root: 'غ ي ر', wazn: 'فَعْل', type: 'Noun', meaning: 'Not / other than — expressing difference and exclusion', ar_meaning: 'غير: اسم يدلّ على المغايرة والاستثناء' },
-  'المغضوب': { root: 'غ ض ب', wazn: 'مَفْعُول', type: 'Adjective', meaning: 'Those who incurred divine wrath', ar_meaning: 'المغضوب: اسم مفعول من غضب، من أنزل الله عليهم الغضب' },
-  'الضالين': { root: 'ض ل ل', wazn: 'فَاعِلِين', type: 'Adjective', meaning: 'Those who went astray through ignorance and error', ar_meaning: 'الضالون: جمع ضال، من ضل عن الحق بجهل أو غفلة' },
-  'ذلك': { root: '—', wazn: 'اسم إشارة', type: 'Pronoun', meaning: 'That (far demonstrative pronoun used for elevation and veneration of the Book)', ar_meaning: 'ذلك: اسم إشارة للبعيد إشعاراً بعلو مرتبته وشرفه' },
-  'الكتاب': { root: 'ك ت ب', wazn: 'فِعَال', type: 'Noun', meaning: 'The Book / Divine Scripture — from kataba (to assemble letters and prescribe laws)', ar_meaning: 'الكتاب: القرآن العظيم، وأصله الجمع والتدوين والفرض' },
-  'كتب': { root: 'ك ت ب', wazn: 'فَعَل', type: 'Verb', meaning: 'To write, record, or prescribe', ar_meaning: 'كتب: خطّ وفرض وأوجب' },
-  'لا': { root: '—', wazn: 'حرف نفي', type: 'Particle', meaning: 'No / Not — absolute categorical negation (لا النافية للجنس)', ar_meaning: 'لا: حرف نفي للجنس لاستغراق النفي' },
-  'ريب': { root: 'ر ي ب', wazn: 'فَعْل', type: 'Noun', meaning: 'Doubt, suspicion, or anxiety causing unease in the heart', ar_meaning: 'الريب: الشك المقلق للنفس والارتياب' },
-  'فيه': { root: '—', wazn: 'جار+مجرور', type: 'Particle', meaning: 'In it — preposition fī + pronoun hu', ar_meaning: 'فيه: في الظرفية مضافاً للضمير' },
-  'هدى': { root: 'ه د ي', wazn: 'فُعَل', type: 'Noun', meaning: 'Guidance, direction, clarity, and illumination showing the right path', ar_meaning: 'الهدى: الرشاد والدلالة والبيان والنور' },
-  'للمتقين': { root: 'و ق ي', wazn: 'مُفْتَعِلِين', type: 'Noun / Participle', meaning: 'For the God-conscious / Pious — those who build a shield against divine displeasure', ar_meaning: 'المتقون: جمع متقٍ، من اتقى عذاب الله بامتثال أوامره واجتناب زواجره' },
-  'المتقين': { root: 'و ق ي', wazn: 'مُفْتَعِلِين', type: 'Noun / Participle', meaning: 'The God-conscious / Pious', ar_meaning: 'المتقون: من اتصف بالتقوى وخشي ربه' },
-  'يؤمنون': { root: 'أ م ن', wazn: 'يُفْعِلُون', type: 'Verb', meaning: 'They believe — possessing firm faith, conviction, and trust', ar_meaning: 'يؤمنون: يصدقون بقلوبهم ويقرّون بألسنتهم' },
-  'بالغيب': { root: 'غ ي ب', wazn: 'بِ + فَعْل', type: 'Noun', meaning: 'In the unseen — realities beyond physical senses revealed by Allah', ar_meaning: 'الغيب: ما غاب عن حواس الخلق مما أخبرت به الرسل' },
-  'ويقيمون': { root: 'ق و م', wazn: 'وَ + يُفْعِلُون', type: 'Verb', meaning: 'And they establish — performing prayers properly with humility and punctuality', ar_meaning: 'يقيمون: يؤدون الصلاة كاملة بشروطها وأركانها وخشوعها' },
-  'الصلاة': { root: 'ص ل و', wazn: 'فَعَال', type: 'Noun', meaning: 'The Prayer — prescribed acts of devotion connecting the servant to Allah', ar_meaning: 'الصلاة: العبادة المخصوصة، وأصلها الدعاء والصلة' },
-  'ومما': { root: '—', wazn: 'وَ + مِنْ + مَا', type: 'Particle', meaning: 'And out of what', ar_meaning: 'ومما: و + من الجارة + ما الموصولة' },
-  'رزقناهم': { root: 'ر ز ق', wazn: 'فَعَلْنَاهُم', type: 'Verb', meaning: 'We provided them — blessings, provisions, and sustenance given by Allah', ar_meaning: 'رزقناهم: أعطيناهم من فضلنا ورزقنا' },
-  'ينفقون': { root: 'ن ف ق', wazn: 'يُفْعِلُون', type: 'Verb', meaning: 'They spend — in charity and righteous causes for the sake of Allah', ar_meaning: 'ينفقون: يخرجون المال في وجوه الخير والبر' },
-  'والذين': { root: '—', wazn: 'وَ + موصول', type: 'Particle', meaning: 'And those who', ar_meaning: 'والذين: واو العطف واسم الموصول' },
-  'انزل': { root: 'ن ز ل', wazn: 'أُفْعِلَ', type: 'Verb', meaning: 'Was revealed / sent down from on high', ar_meaning: 'أنزل: أهبط من العلو، والإنزال للقرآن والوحي' },
-  'اليك': { root: '—', wazn: 'إِلَىٰ + كَ', type: 'Particle', meaning: 'To you (O Muhammad ﷺ)', ar_meaning: 'إليك: حرف الجر إلى وكاف الخطاب للنبي ﷺ' },
-  'وما': { root: '—', wazn: 'وَ + مَا', type: 'Particle', meaning: 'And what / whatever', ar_meaning: 'وما: واو العطف وما الموصولة' },
-  'من': { root: '—', wazn: 'حرف', type: 'Particle', meaning: 'From / of / before', ar_meaning: 'من: حرف جر للابتداء أو التبعيض' },
-  'قبلك': { root: 'ق ب ل', wazn: 'فَعْل + كَ', type: 'Noun', meaning: 'Before you — prior revelations to previous prophets', ar_meaning: 'قبلك: اسم زمان دال على التقدم' },
-  'وبالآخرة': { root: 'أ خ ر', wazn: 'بِ + فاعِلَة', type: 'Noun', meaning: 'And in the Hereafter — the eternal life, resurrection, and reckoning', ar_meaning: 'الآخرة: الدار الآخرة وما فيها من بعث وحساب وجنة ونار' },
-  'هم': { root: '—', wazn: 'ضمير', type: 'Pronoun', meaning: 'They (third person plural pronoun)', ar_meaning: 'هم: ضمير فصل أو رفع منفصل' },
-  'يوقنون': { root: 'ي ق ن', wazn: 'يُفْعِلُون', type: 'Verb', meaning: 'They are certain — having unshakeable faith without doubt', ar_meaning: 'يوقنون: يعلمون علماً جازماً لا يتطرق إليه شك' },
-  'اولئك': { root: '—', wazn: 'اسم إشارة', type: 'Pronoun', meaning: 'Those are the ones (demonstrative emphasizing high honour)', ar_meaning: 'أولئك: اسم إشارة للبعيد لتعظيم شأنهم' },
-  'على': { root: '—', wazn: 'حرف', type: 'Particle', meaning: 'Upon / firmly grounded upon', ar_meaning: 'على: حرف جر للاستعلاء والتمكن' },
-  'ربهم': { root: 'ر ب ب', wazn: 'فَعْل + هُم', type: 'Noun', meaning: 'Their Lord and Sustainer', ar_meaning: 'ربهم: مالكهم وخالقهم وهاديهم' },
-  'المفلحون': { root: 'ف ل ح', wazn: 'مُفْعِلُون', type: 'Noun / Participle', meaning: 'The successful — those who attain all good and are saved from ruin', ar_meaning: 'المفلحون: الفائزون بالبغية الناجون من المكروه' },
-};
-
-function findClassicalWord(token: string): { root?: string; wazn?: string; type?: string; meaning?: string; ar_meaning?: string } | null {
-  const norm = normalizeWord(token);
-  if (CLASSICAL_LEXICON[norm]) return CLASSICAL_LEXICON[norm];
-
-  const prefixes = ['وال', 'فال', 'بال', 'كال', 'ولل', 'فلل', 'ال', 'لل', 'وا', 'فا', 'با', 'و', 'ف', 'ب', 'ل', 'ك'];
-  for (const p of prefixes) {
-    if (norm.startsWith(p) && norm.length > p.length + 1) {
-      const s = norm.slice(p.length);
-      if (CLASSICAL_LEXICON[s]) return CLASSICAL_LEXICON[s];
-    }
-  }
-  return null;
-}
-
-function buildFallbackDictionary(ayahText?: string, surahName?: string, ayahNumber?: number): string {
-  if (!ayahText) return 'Lexical analysis data is currently unavailable.';
-  const tokens = ayahText.split(' ').map(w => w.replace(/[﴿﴾۝۞۩\u0600-\u0605\u061C\u06DD\uFEFF]/g, '').trim()).filter(Boolean);
-
-  let md = `### Word-by-Word Lexical Analysis${surahName ? ` — Surah ${surahName}` : ''}${ayahNumber ? ` : Ayah ${ayahNumber}` : ''}\n\n`;
-
-  let count = 1;
-  for (let i = 0; i < tokens.length; i++) {
-    const raw = tokens[i];
-    const cleaned = raw.replace(/[\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED]/g, '').trim();
-    if (!cleaned) continue;
-
-    const classical = findClassicalWord(cleaned);
-
-    md += `#### ${count}. ﴿${cleaned}﴾\n`;
-    if (classical) {
-      if (classical.root && classical.root !== '—') md += `- **Root (الجذر):** \`${classical.root}\`\n`;
-      if (classical.wazn) md += `- **Pattern (الوزن):** ${classical.wazn}\n`;
-      if (classical.type) md += `- **Type (النوع):** ${classical.type}\n`;
-      if (classical.meaning) md += `- **Meaning:** ${classical.meaning}\n`;
-      if (classical.ar_meaning) md += `- **Classical Lexicon (المعجم):** ${classical.ar_meaning}\n`;
-    } else {
-      md += `- **Word:** \`${cleaned}\`\n`;
-      md += `- **Lexicon Reference:** Classical Arabic lexical entry (Lisan al-Arab, Al-Mufradat fi Gharib al-Quran).\n`;
-    }
-    md += `\n`;
-    count++;
-  }
-
-  return md;
-}
-
 function getMessages(
   type: string,
   payload: {
@@ -158,13 +40,7 @@ function getMessages(
     word?: string;
   }
 ): PromptMessages {
-  const {
-    ayahText,
-    surahName,
-    ayahNumber,
-    surahNumber,
-    word
-  } = payload;
+  const { ayahText, surahName, ayahNumber, surahNumber, word } = payload;
 
   switch (type) {
     case 'grammar':
@@ -189,46 +65,42 @@ function getMessages(
 **إعراب الجمل:** [شرح مختصر جداً].`
       };
 
-    case 'morphology':
-      const authenticMorphology = getVerseMorphology(
-        Number(surahNumber),
-        Number(ayahNumber)
-      );
+    case 'morphology': {
+      const authenticMorphology = (surahNumber && ayahNumber)
+        ? getVerseMorphology(Number(surahNumber), Number(ayahNumber))
+        : [];
 
-      const morphologyText = authenticMorphology
-        .map(
-          (m) =>
-            `${m.word} → POS:${m.pos} → ${m.features.join(", ")}`
-        )
-        .join("\n");
+      let morphologyContext = '';
+      if (authenticMorphology.length > 0) {
+        morphologyContext = `\n\nبيانات صرفية موثوقة من قاعدة بيانات Quranic Arabic Corpus:\n` +
+          authenticMorphology
+            .map(m => `${m.word} → POS:${m.pos} → ${m.features.join(', ')}`)
+            .join('\n');
+      }
 
       return {
-        system: `أنت باحث أكاديمي متخصص في الصرف القرآني الكلاسيكي.
+        system: `أنت باحث أكاديمي متخصص في الصرف القرآني الكلاسيكي وفق منهج أئمة الصرف كابن جني والزمخشري وابن هشام والحملاوي.`,
+        user: `قم بالتحليل الصرفي الكامل والدقيق للكلمات المحورية في الآية الكريمة التالية من سورة ${surahName}، الآية رقم ${ayahNumber}:
 
-مهمتك الأساسية:
-- استخدام بيانات الصرف الموثوقة فقط.
-- ممنوع اختراع الجذور أو الأوزان أو المعلومات الصرفية.
-- إذا كانت البيانات غير موجودة فلا تخمّن.
-- استخدم فقط البيانات المقدمة لك.
-- دورك هو الشرح والتوضيح وليس اختراع التحليل.`,
-        user: `الآية:
-﴿${ayahText}﴾
+"${ayahText}"${morphologyContext}
 
-بيانات صرفية موثوقة من قاعدة بيانات Quranic Arabic Corpus:
+لكل كلمة أساسية في الآية (تجاوز حروف الجر والضمائر البسيطة وركّز على الأسماء والأفعال والمشتقات)، قدّم التحليل التالي بالتفصيل:
 
-${morphologyText}
+**الكلمة: [اكتب الكلمة مع الضبط التام]**
+- **الجذر (الجذر اللغوي):** اذكر حروف الجذر الثلاثية أو الرباعية ومعناه الأصلي في معاجم اللغة.
+- **الوزن الصرفي:** اذكر وزنه الصرفي الدقيق مع ضبط الشكل الكامل (مثل: فَعَلَ / فَعِيل / مُسْتَفْعِل).
+- **النوع:** (اسم فاعل / اسم مفعول / مصدر / صفة مشبهة / فعل ماضٍ / مضارع / أمر ...إلخ).
+- **التحليل الصرفي والإعلال والإبدال:** إذا وقع في الكلمة إعلال أو إبدال أو إدغام أو حذف، فاشرحه خطوة بخطوة مع ذكر القاعدة الصرفية.
+- **الصرف الصغير:** اذكر الفعل الماضي والمضارع والمصدر واسم الفاعل واسم المفعول.
+- **الصرف الكبير:** اذكر تصريف الصيغة للمفرد والمثنى والجمع والمذكر والمؤنث حسب ما ينطبق عليها.
 
-المطلوب:
-- اشرح الكلمات صرفياً اعتماداً فقط على البيانات أعلاه.
-- وضّح معنى POS إن وجد.
-- اشرح السمات الصرفية بطريقة تعليمية واضحة.
-- إذا كانت هناك ظاهرة صرفية مهمة فاشرحها.
-- لا تخترع أي معلومة غير موجودة في البيانات.
-- اكتب بالعربية الفصحى الأكاديمية الواضحة.
+افصل بين كل كلمة بخط فاصل (---).
 
-افصل بين الكلمات بخط:
----`
+اختم بـ**خاتمة صرفية** تُبرز أهم الظواهر الصرفية في الآية وبلاغتها الإعجازية.
+
+اكتب التحليل كاملاً بالعربية الفصحى على مستوى المتخصصين في علم الصرف.`
       };
+    }
 
     case 'dictionary':
       return {
@@ -237,34 +109,83 @@ ${morphologyText}
 
 "${ayahText}"
 
-For each word:
-1. Arabic Word
-2. Root
-3. Core Meaning
-4. Contextual Meaning
-5. Classical Definition
-6. Other Quranic usages`
+For each word (including particles where relevant):
+1. **Arabic Word** with full tashkeel (in brackets ﴿ ﴾)
+2. **Root (Jidhr)** — the trilateral/quadrilateral root
+3. **Core Meaning of Root** — the primary semantic field of the root
+4. **Contextual Meaning** — exact meaning in this ayah
+5. **Classical Definition** — cite from Lisan al-Arab, Maqayis al-Lugha, or Al-Mufradat
+6. **Other Quranic Occurrences** — mention 1-2 other uses in the Quran if notable
+
+Format as a clean structured list for each word (not a table, for better readability). Write Arabic words with full tashkeel. Keep definitions in English with Arabic technical terms where appropriate.`
       };
 
     case 'word':
       return {
-        system: `You are a rigorous Arabic-English lexicographer specializing in Quranic vocabulary.`,
-        user: `Provide a detailed dictionary entry for the Arabic word: "${word}"
+        system: `You are a rigorous Arabic-English lexicographer specializing in Quranic vocabulary, cross-referencing Ibn Manzur's "Lisan al-Arab", Al-Fayruzabadi's "Al-Qamus al-Muhit", Al-Raghib's "Al-Mufradat fi Gharib al-Quran", and Lane's Lexicon.`,
+        user: `Provide a detailed dictionary entry for the Arabic word: **"${word}"**
 
 Include:
-1. Root & Wazn
-2. Semantic field
-3. English meanings
-4. Classical definitions
-5. Quranic usages`
+1. **Root & Wazn** — trilateral root and morphological pattern
+2. **Core Semantic Field** — the primary meaning of the root
+3. **English Meanings** — all relevant meanings, primary to extended
+4. **Classical Arabic Definitions** — from Lisan al-Arab and/or Maqayis al-Lugha (quote in Arabic)
+5. **Al-Raghib's Definition** — from Al-Mufradat if available (especially for Quranic terms)
+6. **Quranic Usage** — key Quranic occurrences showing different usages
+7. **Related Forms** — other words derived from the same root
+
+Format with clear Markdown headings.`
       };
 
     case 'conjugation':
       return {
-        system: `أنت متخصص في التصريف العربي الكلاسيكي.`,
-        user: `صرّف الفعل التالي تصريفاً كاملاً:
+        system: `أنت متخصص في علم الصرف والتصريف العربي الكلاسيكي. مهمتك توليد جدول تصريف كامل ودقيق لأي فعل عربي يُعطى لك — سواء أُعطي بصيغة الماضي أو المضارع أو المصدر أو أي صيغة أخرى. تلتزم بمنهج النحاة البصريين والكوفيين وتتبع أوزان الصرف الكلاسيكية بدقة تامة.`,
+        user: `صرِّف الفعل العربي التالي تصريفاً كاملاً: **"${word}"**
 
-${word}`
+**أولاً — معلومات الفعل:**
+- الجذر الثلاثي (أو الرباعي):
+- الباب الصرفي (الوزن الأصلي — مثل: فَعَلَ / فَعِلَ / فَعُلَ / أَفْعَلَ / فَعَّلَ / فَاعَلَ ...):
+- نوع الفعل: (صحيح سالم / مهموز / مضاعف / أجوف / ناقص / لفيف / مزيد بحرف / مزيد بحرفين):
+- المصدر (المصادر القياسية):
+- اسم الفاعل:
+- اسم المفعول (إن كان متعدياً):
+- اسم المكان/الزمان:
+
+**ثانياً — جدول التصريف الكامل:**
+
+اعرض الجدول بهذا الترتيب الدقيق لجميع الضمائر الثلاثة عشر:
+
+| الضمير | الماضي المبني للمعلوم | المضارع المرفوع | فعل الأمر |
+|--------|----------------------|-----------------|-----------|
+| أنا | | | — |
+| نحن | | | — |
+| أنتَ | | | |
+| أنتِ | | | |
+| أنتما | | | |
+| أنتم | | | |
+| أنتنَّ | | | |
+| هو | | | — |
+| هي | | | — |
+| هما (مذ) | | | — |
+| هما (مؤ) | | | — |
+| هم | | | — |
+| هنَّ | | | — |
+
+**ثالثاً — المضارع المنصوب والمجزوم:**
+اذكر صيغ المضارع المنصوب (بـ أن/لن) والمجزوم (بـ لم/لا الناهية) للضمائر الرئيسية (أنا، هو، هي، أنتَ، هم).
+
+**رابعاً — المبني للمجهول:**
+
+| الضمير | الماضي للمجهول | المضارع للمجهول |
+|--------|---------------|----------------|
+| هو | | |
+| هي | | |
+| هم | | |
+
+**خامساً — ملاحظات صرفية:**
+اذكر أي ظواهر إعلال أو إبدال أو إدغام أو حذف تطرأ على هذا الفعل مع التفسير.
+
+اكتب جميع الأفعال بالشكل الكامل (تشكيل تام). اكتب الجداول بالعربية الفصحى.`
       };
 
     default:
@@ -277,7 +198,7 @@ const VALID_TYPES = new Set([
   'morphology',
   'dictionary',
   'word',
-  'conjugation'
+  'conjugation',
 ]);
 
 router.post('/analysis/stream', async (req, res) => {
@@ -287,11 +208,25 @@ router.post('/analysis/stream', async (req, res) => {
     surahName,
     ayahNumber,
     surahNumber,
-    word
+    word,
   } = req.body;
 
   if (!type || !VALID_TYPES.has(type)) {
     res.status(400).json({ error: 'Missing or invalid type' });
+    return;
+  }
+
+  let messages: PromptMessages;
+  try {
+    messages = getMessages(type, {
+      ayahText,
+      surahName,
+      ayahNumber,
+      surahNumber,
+      word,
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
     return;
   }
 
@@ -304,23 +239,15 @@ router.post('/analysis/stream', async (req, res) => {
 
   if (groq) {
     try {
-      const messages = getMessages(type, {
-        ayahText,
-        surahName,
-        ayahNumber,
-        surahNumber,
-        word
-      });
-
       const stream = await groq.chat.completions.create({
         model: MODEL,
         messages: [
           { role: 'system', content: messages.system },
-          { role: 'user', content: messages.user }
+          { role: 'user', content: messages.user },
         ],
-        temperature: 0,
+        temperature: 0.05,
         max_tokens: 4096,
-        stream: true
+        stream: true,
       });
 
       for await (const chunk of stream) {
@@ -339,37 +266,16 @@ router.post('/analysis/stream', async (req, res) => {
       if (is429 && GROQ_KEYS.length > 1) {
         rotateKey();
       }
+      const msg = is429
+        ? 'Daily token limit reached. Please try again in a few hours.'
+        : 'Analysis failed. Please try again.';
+      res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+      res.end();
+      return;
     }
   }
 
-  // Fallback if Groq client is not configured or failed
-  if (type === 'dictionary') {
-    const fallbackText = buildFallbackDictionary(ayahText, surahName, ayahNumber);
-    res.write(`data: ${JSON.stringify({ text: fallbackText })}\n\n`);
-    res.write('data: [DONE]\n\n');
-    res.end();
-    return;
-  }
-
-  if (type === 'word' && word) {
-    const classical = findClassicalWord(word);
-    let text = `### Lexical Entry: ﴿${word}﴾\n\n`;
-    if (classical) {
-      if (classical.root && classical.root !== '—') text += `- **Root (الجذر):** \`${classical.root}\`\n`;
-      if (classical.wazn) text += `- **Pattern (الوزن):** ${classical.wazn}\n`;
-      if (classical.type) text += `- **Type (النوع):** ${classical.type}\n`;
-      if (classical.meaning) text += `- **Meaning:** ${classical.meaning}\n`;
-      if (classical.ar_meaning) text += `- **Classical Lexicon (المعجم):** ${classical.ar_meaning}\n`;
-    } else {
-      text += `- **Word:** \`${word}\`\n- **Definition:** Derived from classical Arabic lexicons including Lisan al-Arab and Mu'jam Maqayis al-Lugha.\n`;
-    }
-    res.write(`data: ${JSON.stringify({ text })}\n\n`);
-    res.write('data: [DONE]\n\n');
-    res.end();
-    return;
-  }
-
-  const msg = 'Analysis service is temporarily unavailable. Please try again.';
+  const msg = 'AI service is currently unavailable. Please configure the GROQ_API_KEY.';
   res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
   res.end();
 });
