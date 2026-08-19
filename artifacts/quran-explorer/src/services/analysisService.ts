@@ -58,6 +58,9 @@ export async function streamAnalysis(
           if (parsed.text) {
             fullText += parsed.text;
             onChunk(fullText);
+          } else if (parsed.error) {
+            fullText = parsed.error;
+            onChunk(fullText);
           }
         } catch { /* ignore malformed chunks */ }
       }
