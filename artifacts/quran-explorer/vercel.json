@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "https://quranic-linguistic-explorer.onrender.com/api/$1"
-    }
-  ]
-}
