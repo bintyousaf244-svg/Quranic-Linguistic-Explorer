@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Ayah, Note } from '../types';
+<<<<<<< HEAD
 import { BookOpen, Sparkles, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked, Play, Pause, Volume2, Bookmark } from 'lucide-react';
+=======
+import { BookOpen, FileText, MessageSquare, Save, Loader2, X, Copy, Check, Languages, BookMarked, Play, Pause, Volume2, Bookmark } from 'lucide-react';
+>>>>>>> parent of fdc9528 (commit)
 import { WordPopup, WordInfo, RootFamilyMatch } from './WordPopup';
 import ReactMarkdown from 'react-markdown';
 import { streamAnalysis, fetchAuthenticGrammar } from '../services/analysisService';
@@ -73,6 +77,11 @@ export const AyahCard: React.FC<AyahCardProps> = ({
     } catch { /* ignore */ }
     setIsRootFamilyLoading(true);
     try {
+<<<<<<< HEAD
+=======
+      // For doubled roots (XYY pattern, e.g. ربب ضلل), the doubled letter appears
+      // with shadda in Quranic text, so substring-match for XYY fails — use XY instead.
+>>>>>>> parent of fdc9528 (commit)
       let searchStr = stripped;
       if (stripped.length === 3 && stripped[1] === stripped[2]) {
         searchStr = stripped.slice(0, 2);
@@ -91,7 +100,11 @@ export const AyahCard: React.FC<AyahCardProps> = ({
   };
 
   const fetchWordInfo = async (word: string, wordIndex: number) => {
+<<<<<<< HEAD
     const cacheKey = `word_popup_v5_${surahNumber}_${ayah.numberInSurah}_${wordIndex}`;
+=======
+    const cacheKey = `word_popup_v4_${surahNumber}_${ayah.numberInSurah}_${wordIndex}`;
+>>>>>>> parent of fdc9528 (commit)
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
@@ -121,6 +134,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
     }
   };
 
+<<<<<<< HEAD
   const handleWordClick = (raw: string, tokenIndex: number, e: React.MouseEvent) => {
     e.stopPropagation();
     const word = raw.replace(/[﴿﴾۝۞۩\u0600-\u0605\u061C\u06DD\uFEFF]/g, '').trim();
@@ -145,13 +159,27 @@ export const AyahCard: React.FC<AyahCardProps> = ({
     const s = String(surahNumber).padStart(3, '0');
     const a = String(ayah.numberInSurah).padStart(3, '0');
     const w = String(audioPos).padStart(3, '0');
+=======
+  const handleWordClick = (raw: string, wordIndex: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const word = raw.replace(/[﴿﴾۝۞۩\u0600-\u0605\u061C\u06DD]/g, '').trim();
+    if (!word) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const s = String(surahNumber).padStart(3, '0');
+    const a = String(ayah.numberInSurah).padStart(3, '0');
+    const w = String(wordIndex + 1).padStart(3, '0');
+>>>>>>> parent of fdc9528 (commit)
     setWordAudioUrl(`https://audio.qurancdn.com/wbw/${s}_${a}_${w}.mp3`);
     setActiveWord(word);
     setWordInfo(null);
     setRootFamily([]);
     setRootFamilyCount(undefined);
     setWordPopupPos({ x: rect.left + rect.width / 2, y: rect.top });
+<<<<<<< HEAD
     fetchWordInfo(word, actualWordIndex);
+=======
+    fetchWordInfo(word, wordIndex);
+>>>>>>> parent of fdc9528 (commit)
   };
 
   useEffect(() => {
@@ -183,11 +211,16 @@ export const AyahCard: React.FC<AyahCardProps> = ({
         setGrammarAnalysis(cached);
         setGrammarSourceLabel(meta?.sourceLabel ?? '');
         setGrammarIsAuthentic(meta?.authentic ?? false);
+<<<<<<< HEAD
       } else if (type === 'morphology') {
         setMorphologyAnalysis(cached);
       } else {
         setDictionaryAnalysis(cached);
       }
+=======
+      } else if (type === 'morphology') setMorphologyAnalysis(cached);
+      else setDictionaryAnalysis(cached);
+>>>>>>> parent of fdc9528 (commit)
       return;
     }
 
@@ -208,17 +241,26 @@ export const AyahCard: React.FC<AyahCardProps> = ({
       }
 
       let fullText = '';
+<<<<<<< HEAD
       await streamAnalysis(type, { ayahText: ayah.text, surahName, surahNumber, ayahNumber: ayah.numberInSurah }, (text) => {
+=======
+      await streamAnalysis(type, { ayahText: ayah.text, surahName, ayahNumber: ayah.numberInSurah }, (text) => {
+>>>>>>> parent of fdc9528 (commit)
         fullText = text;
         if (type === 'grammar') {
           setGrammarAnalysis(text);
           setGrammarSourceLabel('');
           setGrammarIsAuthentic(false);
+<<<<<<< HEAD
         } else if (type === 'morphology') {
           setMorphologyAnalysis(text);
         } else {
           setDictionaryAnalysis(text);
         }
+=======
+        } else if (type === 'morphology') setMorphologyAnalysis(text);
+        else setDictionaryAnalysis(text);
+>>>>>>> parent of fdc9528 (commit)
       });
       if (fullText) AnalysisCache.set(type, surahName, ayah.numberInSurah, fullText);
     } catch {
@@ -387,8 +429,13 @@ export const AyahCard: React.FC<AyahCardProps> = ({
               <TabBtn id="tafseer" label={t('tabTafseer')} icon={BookMarked} color="var(--grove-teal)" />
             )}
             <TabBtn id="dictionary" label={t('tabDict')} icon={Languages} color="var(--grove-teal)" />
+<<<<<<< HEAD
             <TabBtn id="morphology" label={t('tabMorph')} icon={Sparkles} color="var(--grove-gold)" />
             <TabBtn id="grammar" label={t('tabIrab')} icon={BookOpen} color="var(--grove-purple)" />
+=======
+            <TabBtn id="grammar" label={t('tabIrab')} icon={BookOpen} color="var(--grove-purple)" />
+            <TabBtn id="morphology" label={t('tabMorph')} icon={FileText} color="var(--grove-gold)" />
+>>>>>>> parent of fdc9528 (commit)
             <TabBtn id="notes" label={t('tabNotes')} icon={MessageSquare} color="var(--grove-pink)" />
           </div>
         </div>
@@ -494,6 +541,12 @@ export const AyahCard: React.FC<AyahCardProps> = ({
             </div>
           );
         })()}
+<<<<<<< HEAD
+=======
+        {activeTabs.includes('grammar') && (
+          <Panel id="grammar" title="Arabic I'rab (إعراب)" content={grammarAnalysis} color="var(--grove-purple)" rtl />
+        )}
+>>>>>>> parent of fdc9528 (commit)
         {activeTabs.includes('dictionary') && (
           <Panel id="dictionary" title="Word Dictionary" content={dictionaryAnalysis} color="var(--grove-teal)"
             note="Definitions derived from Lisan al-Arab, Mu'jam Maqayis al-Lugha, and Lane's Lexicon." />
@@ -502,9 +555,12 @@ export const AyahCard: React.FC<AyahCardProps> = ({
           <Panel id="morphology" title="Morphological Analysis (Sarf)" content={morphologyAnalysis} color="var(--grove-gold)" rtl
             note="Morphological data follows classical Sarf methodology of Ibn Jinni and Al-Hamalawy." />
         )}
+<<<<<<< HEAD
         {activeTabs.includes('grammar') && (
           <Panel id="grammar" title="Arabic I'rab (إعراب)" content={grammarAnalysis} color="var(--grove-purple)" rtl />
         )}
+=======
+>>>>>>> parent of fdc9528 (commit)
         {activeTabs.includes('notes') && (
           <div className="p-8 md:p-10" style={{ backgroundColor: 'color-mix(in srgb, var(--grove-pink) 6%, transparent)' }}>
             <div className="flex items-center justify-between mb-6">
@@ -561,4 +617,8 @@ export const AyahCard: React.FC<AyahCardProps> = ({
       )}
     </div>
   );
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> parent of fdc9528 (commit)

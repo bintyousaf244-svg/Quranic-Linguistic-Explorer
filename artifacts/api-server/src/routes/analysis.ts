@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import Groq from 'groq-sdk';
+<<<<<<< HEAD
 import { getVerseMorphology } from '../services/morphologyService';
+=======
+>>>>>>> parent of fdc9528 (commit)
 
 const router = Router();
 
@@ -36,11 +39,14 @@ function getMessages(
     ayahText?: string;
     surahName?: string;
     ayahNumber?: number;
-    surahNumber?: number;
     word?: string;
   }
 ): PromptMessages {
+<<<<<<< HEAD
   const { ayahText, surahName, ayahNumber, surahNumber, word } = payload;
+=======
+  const { ayahText, surahName, ayahNumber, word } = payload;
+>>>>>>> parent of fdc9528 (commit)
 
   switch (type) {
     case 'grammar':
@@ -56,15 +62,19 @@ function getMessages(
 ﴿كلمة﴾ : [إعراب موجز].
 
 **قواعد الإيجاز:**
-- للكلمة ذات الإعراب البسيط: كلمة واحدة أو اثنتان فقط.
+- للكلمة ذات الإعراب البسيط: كلمة واحدة أو اثنتان فقط، مثل: ﴿الحمد﴾ : مبتدأ.
 - للجار والمجرور: ﴿لله﴾ : جار ومجرور متعلقان بمحذوف خبر.
-- لا تذكر علامات الإعراب للكلمات العادية.
-- اكتب بأسلوب مختصر جداً.
+- للبدل أو الصفة: ﴿رب﴾ : صفة لله أو بدل منه.
+- اذكر علامة الإعراب فقط إذا كانت غير قياسية (مثل الجمع المذكر السالم وجمع التكسير والأسماء الخمسة والممنوع من الصرف).
+- مثال على ذكر العلامة: ﴿العالمين﴾ : مضاف إليه وعلامة جره الياء نيابة عن الكسرة، لأنه ملحق بجمع المذكر السالم.
+- لا تذكر "مرفوع وعلامته الضمة" أو "منصوب وعلامته الفتحة" للكلمات العادية — فهذا معلوم ويجعل الإعراب مطوّلاً.
+- لا تكتب "كلمة:" أو "**كلمة:**" — اكتب ﴿كلمة﴾ بالأقواس القرآنية فقط.
 
-بعد الانتهاء:
-**إعراب الجمل:** [شرح مختصر جداً].`
+بعد الانتهاء من جميع الكلمات، أضف سطراً فاصلاً ثم:
+**إعراب الجمل:** [جملة واحدة أو اثنتان تشرح محل كل جملة من الإعراب].`
       };
 
+<<<<<<< HEAD
     case 'morphology': {
       const authenticMorphology = (surahNumber && ayahNumber)
         ? getVerseMorphology(Number(surahNumber), Number(ayahNumber))
@@ -98,6 +108,54 @@ function getMessages(
 
 اختم بـ**خاتمة صرفية** تُبرز أهم الظواهر الصرفية في الآية وبلاغتها الإعجازية.
 
+=======
+    case 'morphology':
+      return {
+        system: `أنت باحث أكاديمي متخصص في الصرف القرآني الكلاسيكي، تعتمد فقط على المعلومات الموثوقة من كتب الصرف واللغة والتفاسير المعتمدة، مثل:
+- شذا العرف للهملاوي
+- الخصائص لابن جني
+- لسان العرب
+- مقاييس اللغة
+- المفردات للراغب
+- Quranic Arabic Corpus
+
+قواعد صارمة جداً يجب الالتزام بها:
+
+- ممنوع تماماً اختراع الجذور أو الأوزان أو الأبواب الصرفية.
+- إذا لم تكن متأكداً بنسبة عالية، اكتب:
+"تعذر التحقق من المعلومة صرفياً بشكل موثوق."
+- لا تخمّن أبداً.
+- لا تنسب أي كلمة إلى جذر غير متحقق.
+- إذا كان للكلمة أكثر من احتمال صرفي، اذكر الاحتمالات بوضوح.
+- الدقة العلمية أهم من كثرة المعلومات.
+- اعتمد منهج الصرفيين الكلاسيكيين بدقة.
+- لا تقدّم أي معلومة صرفية غير موثوقة.
+- لا تخترع الإعلال أو الإدغام أو القواعد الصرفية.
+- إذا كانت الكلمة تحتمل خلافاً بين العلماء فاذكر ذلك.
+
+اكتب بلغة أكاديمية دقيقة جداً، مع المحافظة على الوضوح والتنظيم.`,
+
+        user: `قم بالتحليل الصرفي الكامل والدقيق للكلمات المحورية في الآية الكريمة التالية من سورة ${surahName}، الآية رقم ${ayahNumber}:
+
+"${ayahText}"
+
+لكل كلمة أساسية في الآية (تجاوز حروف الجر والضمائر البسيطة وركّز على الأسماء والأفعال والمشتقات)، قدّم التحليل التالي بالتفصيل:
+
+**الكلمة: [اكتب الكلمة]**
+- **الجذر (الجذر اللغوي):** اذكر حروف الجذر الثلاثية أو الرباعية ومعناه الأصلي.
+- **الوزن:** اذكر وزنه الصرفي الدقيق مع ضبط الشكل الكامل.
+- **النوع:** (مصدر / اسم فاعل / اسم مفعول / صفة مشبهة / فعل ماضٍ / مضارع ...إلخ).
+- **التحليل الصرفي والإعلال:** إذا وقع في الكلمة إعلال أو إبدال أو إدغام، فاشرحه خطوة بخطوة مع ذكر القاعدة الصرفية.
+- **الصرف الصغير (للفعل المجرد أو المزيد):** اذكر الفعل الماضي والمضارع والمصدر واسم الفاعل واسم المفعول.
+- **الصرف الكبير (للصيغة المستخدمة في الآية):** اذكر تصريف الكلمة للمفرد والمثنى والجمع والمذكر والمؤنث حسب ما ينطبق عليها.
+
+افصل بين كل كلمة بخط فاصل (---).
+
+اختم بـ**خاتمة صرفية** تُبرز أهم الظواهر الصرفية في الآية وبلاغتها اللغوية.
+
+إذا لم تستطع التحقق من معلومة صرفية بشكل موثوق، فاذكر ذلك بوضوح ولا تخمّن.
+
+>>>>>>> parent of fdc9528 (commit)
 اكتب التحليل كاملاً بالعربية الفصحى على مستوى المتخصصين في علم الصرف.`
       };
     }
@@ -110,7 +168,11 @@ function getMessages(
 "${ayahText}"
 
 For each word (including particles where relevant):
+<<<<<<< HEAD
 1. **Arabic Word** with full tashkeel (in brackets ﴿ ﴾)
+=======
+1. **Arabic Word** with full tashkeel
+>>>>>>> parent of fdc9528 (commit)
 2. **Root (Jidhr)** — the trilateral/quadrilateral root
 3. **Core Meaning of Root** — the primary semantic field of the root
 4. **Contextual Meaning** — exact meaning in this ayah
@@ -123,6 +185,10 @@ Format as a clean structured list for each word (not a table, for better readabi
     case 'word':
       return {
         system: `You are a rigorous Arabic-English lexicographer specializing in Quranic vocabulary, cross-referencing Ibn Manzur's "Lisan al-Arab", Al-Fayruzabadi's "Al-Qamus al-Muhit", Al-Raghib's "Al-Mufradat fi Gharib al-Quran", and Lane's Lexicon.`,
+<<<<<<< HEAD
+=======
+
+>>>>>>> parent of fdc9528 (commit)
         user: `Provide a detailed dictionary entry for the Arabic word: **"${word}"**
 
 Include:
@@ -140,6 +206,7 @@ Format with clear Markdown headings.`
     case 'conjugation':
       return {
         system: `أنت متخصص في علم الصرف والتصريف العربي الكلاسيكي. مهمتك توليد جدول تصريف كامل ودقيق لأي فعل عربي يُعطى لك — سواء أُعطي بصيغة الماضي أو المضارع أو المصدر أو أي صيغة أخرى. تلتزم بمنهج النحاة البصريين والكوفيين وتتبع أوزان الصرف الكلاسيكية بدقة تامة.`,
+<<<<<<< HEAD
         user: `صرِّف الفعل العربي التالي تصريفاً كاملاً: **"${word}"**
 
 **أولاً — معلومات الفعل:**
@@ -151,6 +218,20 @@ Format with clear Markdown headings.`
 - اسم المفعول (إن كان متعدياً):
 - اسم المكان/الزمان:
 
+=======
+
+        user: `صرِّف الفعل العربي التالي تصريفاً كاملاً: **"${word}"**
+
+**أولاً — معلومات الفعل:**
+- الجذر الثلاثي (أو الرباعي):
+- الباب الصرفي (الوزن الأصلي — مثل: فَعَلَ / فَعِلَ / فَعُلَ / أَفْعَلَ / فَعَّلَ / فَاعَلَ ...):
+- نوع الفعل: (صحيح سالم / مهموز / مضاعف / أجوف / ناقص / لفيف / مزيد بحرف / مزيد بحرفين):
+- المصدر (المصادر القياسية):
+- اسم الفاعل:
+- اسم المفعول (إن كان متعدياً):
+- اسم المكان/الزمان:
+
+>>>>>>> parent of fdc9528 (commit)
 **ثانياً — جدول التصريف الكامل:**
 
 اعرض الجدول بهذا الترتيب الدقيق لجميع الضمائر الثلاثة عشر:
@@ -202,6 +283,7 @@ const VALID_TYPES = new Set([
 ]);
 
 router.post('/analysis/stream', async (req, res) => {
+<<<<<<< HEAD
   const {
     type,
     ayahText,
@@ -210,6 +292,9 @@ router.post('/analysis/stream', async (req, res) => {
     surahNumber,
     word,
   } = req.body;
+=======
+  const { type, ayahText, surahName, ayahNumber, word } = req.body;
+>>>>>>> parent of fdc9528 (commit)
 
   if (!type || !VALID_TYPES.has(type)) {
     res.status(400).json({ error: 'Missing or invalid type' });
@@ -222,8 +307,12 @@ router.post('/analysis/stream', async (req, res) => {
       ayahText,
       surahName,
       ayahNumber,
+<<<<<<< HEAD
       surahNumber,
       word,
+=======
+      word
+>>>>>>> parent of fdc9528 (commit)
     });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -237,6 +326,7 @@ router.post('/analysis/stream', async (req, res) => {
 
   const groq = getGroqClient();
 
+<<<<<<< HEAD
   if (groq) {
     try {
       const stream = await groq.chat.completions.create({
@@ -255,6 +345,27 @@ router.post('/analysis/stream', async (req, res) => {
         if (text) {
           res.write(`data: ${JSON.stringify({ text })}\n\n`);
         }
+=======
+  try {
+    const stream = await groq.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: 'system', content: messages.system },
+        { role: 'user', content: messages.user }
+      ],
+      temperature: 0,
+      max_tokens: 4096,
+      stream: true
+    });
+
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content ?? '';
+
+      if (text) {
+        res.write(`data: ${JSON.stringify({ text })}
+
+`);
+>>>>>>> parent of fdc9528 (commit)
       }
 
       res.write('data: [DONE]\n\n');
@@ -273,6 +384,31 @@ router.post('/analysis/stream', async (req, res) => {
       res.end();
       return;
     }
+<<<<<<< HEAD
+=======
+
+    res.write('data: [DONE]
+
+');
+    res.end();
+  } catch (err: any) {
+    req.log.error({ err }, 'Groq streaming error');
+
+    const is429 = err?.status === 429;
+
+    if (is429 && GROQ_KEYS.length > 1) {
+      rotateKey();
+    }
+
+    const msg = is429
+      ? 'Daily token limit reached. Please try again in a few hours.'
+      : 'Analysis failed. Please try again.';
+
+    res.write(`data: ${JSON.stringify({ error: msg })}
+
+`);
+    res.end();
+>>>>>>> parent of fdc9528 (commit)
   }
 
   const msg = 'AI service is currently unavailable. Please configure the GROQ_API_KEY.';
@@ -281,3 +417,4 @@ router.post('/analysis/stream', async (req, res) => {
 });
 
 export default router;
+```
